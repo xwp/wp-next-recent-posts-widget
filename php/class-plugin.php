@@ -36,7 +36,7 @@ class Plugin extends Plugin_Base {
 	 * @action after_setup_theme
 	 */
 	public function init() {
-		if ( ! defined( 'REST_API_VERSION' ) || ! class_exists( 'WP_REST_Posts_Controller' ) ) {
+		if ( ! defined( 'REST_API_VERSION' ) || ! class_exists( 'WP_REST_Posts_Controller' ) || ! apply_filters( 'rest_enabled', true ) ) {
 			add_action( 'admin_notices', array( $this, 'show_missing_rest_api_admin_notice' ) );
 			return;
 		}
@@ -57,7 +57,7 @@ class Plugin extends Plugin_Base {
 	public function show_missing_rest_api_admin_notice() {
 		?>
 		<div class="error">
-			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the WordPress REST API to be available.', 'next-recent-posts-widget' ); ?></p>
+			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the WordPress REST API to be available and enabled.', 'next-recent-posts-widget' ); ?></p>
 		</div>
 		<?php
 	}
