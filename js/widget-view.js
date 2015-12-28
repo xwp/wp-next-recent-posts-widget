@@ -49,6 +49,9 @@ var nextRecentPostsWidget = (function( $ ) {
 
 			view.hasMore = null;
 
+			view.collection.on( 'change', function() {
+				view.render();
+			} );
 			view.collection.on( 'sync', function( collection, response, options ) {
 				view.hasMore = ( view.model.get( 'number' ) < options.xhr.getResponseHeader( 'X-WP-Total' ) );
 				view.render();
