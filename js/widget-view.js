@@ -24,7 +24,13 @@ var nextRecentPostsWidget = (function( $ ) {
 	};
 
 	self.WidgetModel = Backbone.Model.extend({
-		defaults: self.defaultInstanceData
+		defaults: _.extend(
+			{},
+			self.defaultInstanceData,
+			{
+				has_more: false
+			}
+		)
 	});
 
 	self.WidgetView = Backbone.View.extend({
@@ -47,22 +53,20 @@ var nextRecentPostsWidget = (function( $ ) {
 				return wp.api.collections.Posts.prototype.fetch.call( this, options );
 			};
 
-			view.hasMore = null;
-
 			view.collection.on( 'change', function() {
 				view.render();
 			} );
+			view.model.on( 'change', function() {
+				view.render();
+			} );
 			view.collection.on( 'sync', function( collection, response, options ) {
-				view.hasMore = ( view.model.get( 'number' ) < options.xhr.getResponseHeader( 'X-WP-Total' ) );
+				view.model.set( 'has_more', view.model.get( 'number' ) < options.xhr.getResponseHeader( 'X-WP-Total' ) );
 				view.render();
 			} );
 
 			view.collection.fetch();
 			view.model.on( 'change:number', function() {
 				view.collection.fetch();
-			} );
-			view.model.on( 'change', function() {
-				view.render();
 			} );
 
 			// @todo If we're in the Customizer preview, make sure that this.model gets updated whenever the widget setting gets updated.
@@ -86,14 +90,11 @@ var nextRecentPostsWidget = (function( $ ) {
 		 * Render view.
 		 */
 		render: function() {
-			var view = this, data = {};
-			_.extend( data, view.args );
-			_.extend( data, view.model.attributes );
+			var view = this, data;
+			data = _.extend( {}, view.args, view.model.attributes );
 			data.posts = view.collection.map( function( model ) {
 				return model.attributes;
 			} );
-			data.has_more = view.hasMore;
-
 			view.$el.html( view.template( data ) );
 			view.trigger( 'rendered' );
 		}
