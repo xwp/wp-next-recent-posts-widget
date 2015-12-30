@@ -48,11 +48,16 @@ var nextRecentPostsWidget = (function( $ ) {
 				options = options || {};
 				options.data = options.data || {};
 				_.extend( options.data, {
-					'filter[posts_per_page]': view.model.get( 'number' )
+					'filter[posts_per_page]': view.model.get( 'number' ),
+					'_embed': true
 				} );
 				return wp.api.collections.Posts.prototype.fetch.call( this, options );
 			};
 
+			view.authors = new wp.api.collections.Users();
+			view.authors.on( 'change', function() {
+				view.render();
+			} );
 			view.collection.on( 'change', function() {
 				view.render();
 			} );
@@ -61,6 +66,11 @@ var nextRecentPostsWidget = (function( $ ) {
 			} );
 			view.collection.on( 'sync', function( collection, response, options ) {
 				view.model.set( 'has_more', view.model.get( 'number' ) < options.xhr.getResponseHeader( 'X-WP-Total' ) );
+				collection.each( function( post ) {
+					if ( post.get( 'author' ) instanceof wp.api.models.User ) {
+						view.authors.add( post.get( 'author' ) );
+					}
+				} );
 				view.render();
 			} );
 
@@ -70,6 +80,8 @@ var nextRecentPostsWidget = (function( $ ) {
 			} );
 
 			// @todo If we're in the Customizer preview, make sure that this.model gets updated whenever the widget setting gets updated.
+
+			view.render = _.debounce( view.render );
 		},
 
 		events: {

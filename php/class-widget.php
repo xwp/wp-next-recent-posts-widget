@@ -137,7 +137,8 @@ class Widget extends \WP_Widget {
 		return array(
 			'title' => '',
 			'number' => 5,
-			'show_date' => false,
+			'show_date' => true,
+			'show_author' => true,
 		);
 	}
 
@@ -186,6 +187,9 @@ class Widget extends \WP_Widget {
 						<a href="{{ post.link }}">{{{ post.title.rendered }}}</a>
 						<# if ( data.show_date ) { #>
 							(<time datetime="{{ post.date }}">{{ post.date.toLocaleDateString() }}</time>)
+						<# } #>
+						<# if ( data.show_author ) { #>
+							{{ post.author.attributes.name }}
 						<# } #>
 					</li>
 				<# } ); #>
