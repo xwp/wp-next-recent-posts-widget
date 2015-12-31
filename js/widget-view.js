@@ -1,4 +1,4 @@
-/* global Backbone, _, _nextRecentPostsWidgetExports */
+/* global Backbone, _, _nextRecentPostsWidgetExports, JSON */
 /* exported nextRecentPostsWidget */
 
 var nextRecentPostsWidget = (function( $ ) {
@@ -38,10 +38,23 @@ var nextRecentPostsWidget = (function( $ ) {
 		// @todo Try http://stackoverflow.com/a/20419831
 
 		initialize: function() {
-			var view = this;
-			view.model = new self.WidgetModel( $( view.el ).data( 'instance' ) );
-			view.args = $( view.el ).data( 'args' );
-			view.collection = new wp.api.collections.Posts();
+			var view = this, data, posts, watchAuthorChanges;
+
+			data = JSON.parse( $( view.el ).find( '> script[type="application/json"]' ).text() );
+			view.model = new self.WidgetModel( data.instance );
+			view.args = data.args;
+			posts = _.map(
+				data.posts,
+				function( post ) {
+					/*
+					 * Note that map is needed as otherwise an error occurs:
+					 * Uncaught TypeError: post.date.toLocaleDateString is not a function
+					 */
+					return wp.api.models.Post.prototype.parse( post );
+				}
+			);
+			view.collection = new wp.api.collections.Posts( posts );
+
 			view.template = wp.template( 'next-recent-posts-widget' );
 
 			view.collection.fetch = function( options ) {
@@ -54,33 +67,35 @@ var nextRecentPostsWidget = (function( $ ) {
 				return wp.api.collections.Posts.prototype.fetch.call( this, options );
 			};
 
-			view.authors = new wp.api.collections.Users();
-			view.authors.on( 'change', function() {
-				view.render();
-			} );
+			watchAuthorChanges = function( post ) {
+				var author = post.get( 'author' );
+				if ( author instanceof wp.api.models.User ) {
+					author.on( 'change', function() {
+						view.render();
+					} );
+				}
+			};
+
 			view.collection.on( 'change', function() {
 				view.render();
 			} );
 			view.model.on( 'change', function() {
 				view.render();
 			} );
+			view.collection.on( 'add', watchAuthorChanges );
+			view.collection.each( watchAuthorChanges );
 			view.collection.on( 'sync', function( collection, response, options ) {
 				view.model.set( 'has_more', view.model.get( 'number' ) < options.xhr.getResponseHeader( 'X-WP-Total' ) );
-				collection.each( function( post ) {
-					if ( post.get( 'author' ) instanceof wp.api.models.User ) {
-						view.authors.add( post.get( 'author' ) );
-					}
-				} );
 				view.render();
 			} );
 
-			view.collection.fetch();
 			view.model.on( 'change:number', function() {
 				view.collection.fetch();
 			} );
 
 			// @todo If we're in the Customizer preview, make sure that this.model gets updated whenever the widget setting gets updated.
 
+			view.render();
 			view.render = _.debounce( view.render );
 		},
 

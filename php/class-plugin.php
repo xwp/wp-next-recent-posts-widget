@@ -136,4 +136,27 @@ class Plugin extends Plugin_Base {
 		$data .= sprintf( '_nextRecentPostsWidgetExports.defaultInstanceData = %s;', wp_json_encode( $this->widget->get_default_instance() ) );
 		$wp_scripts->add_data( $handle, 'data', $data );
 	}
+
+	/**
+	 * Get instance of WP_REST_Server.
+	 *
+	 * @return \WP_REST_Server
+	 */
+	public function get_rest_server() {
+		/**
+		 * REST Server.
+		 *
+		 * @var \WP_REST_Server $wp_rest_server
+		 */
+		global $wp_rest_server;
+		if ( empty( $wp_rest_server ) ) {
+			/** This filter is documented in wp-includes/rest-api.php */
+			$wp_rest_server_class = apply_filters( 'wp_rest_server_class', 'WP_REST_Server' );
+			$wp_rest_server = new $wp_rest_server_class();
+
+			/** This filter is documented in wp-includes/rest-api.php */
+			do_action( 'rest_api_init', $wp_rest_server );
+		}
+		return $wp_rest_server;
+	}
 }

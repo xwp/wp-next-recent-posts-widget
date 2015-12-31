@@ -93,17 +93,35 @@ class Widget extends \WP_Widget {
 	 * @param array $instance The settings for the particular instance of the widget.
 	 */
 	public function widget( $args, $instance ) {
+		$instance = array_merge( $this->get_default_instance(), $instance );
+
 		$exported_args = $args;
 		unset( $exported_args['before_widget'] );
 		unset( $exported_args['after_widget'] );
 
-		$data_attrs = sprintf(
-			' data-args="%s" data-instance="%s" ',
-			esc_attr( wp_json_encode( $exported_args ) ),
-			esc_attr( wp_json_encode( $instance ) )
+		$data = array(
+			'args' => $exported_args,
+			'posts' => null,
 		);
 
-		echo preg_replace( '#(^\s*<\w+)#', '$1' . $data_attrs, $args['before_widget'] ); // WPCS: xss ok.
+		$wp_rest_server = $this->plugin->get_rest_server();
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+		$request->set_query_params( array(
+			'filter' => array( 'posts_per_page' => $instance['number'] ),
+		) );
+
+		$response = $wp_rest_server->dispatch( $request );
+		if ( ! $response->is_error() ) {
+			$data['posts'] = $wp_rest_server->response_to_data( $response, true );
+			$instance['has_more'] = ( $instance['number'] < $response->headers['X-WP-Total'] );
+		}
+
+		$data['instance'] = $instance;
+
+		echo $args['before_widget']; // WPCS: xss ok.
+		echo '<script type="application/json">';
+		echo wp_json_encode( $data );
+		echo '</script>';
 		echo $args['after_widget']; // WPCS: xss ok.
 	}
 
