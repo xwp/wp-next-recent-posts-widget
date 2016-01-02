@@ -50,7 +50,7 @@ var nextRecentPostsWidget = (function( $ ) {
 					 * Note that map is needed as otherwise an error occurs:
 					 * Uncaught TypeError: post.date.toLocaleDateString is not a function
 					 */
-					return wp.api.models.Post.prototype.parse( post );
+					return ( wp.api.models.Posts || wp.api.models.Post ).prototype.parse( post );
 				}
 			);
 			view.collection = new wp.api.collections.Posts( posts );
@@ -69,7 +69,7 @@ var nextRecentPostsWidget = (function( $ ) {
 
 			watchAuthorChanges = function( post ) {
 				var author = post.get( 'author' );
-				if ( author instanceof wp.api.models.User ) {
+				if ( author instanceof ( wp.api.models.Users || wp.api.models.User ) ) {
 					author.on( 'change', function() {
 						view.render();
 					} );
@@ -117,10 +117,23 @@ var nextRecentPostsWidget = (function( $ ) {
 		 * Render view.
 		 */
 		render: function() {
-			var view = this, data;
+			var view = this, data, User = ( wp.api.models.Users || wp.api.models.User );
 			data = _.extend( {}, view.args, view.model.attributes );
 			data.posts = view.collection.map( function( model ) {
-				return model.attributes;
+				var userAttributes, postData = _.clone( model.attributes );
+				if ( ! ( postData.date instanceof Date ) ) {
+					postData.date = new Date( postData.date );
+				}
+				if ( ! ( postData.author instanceof ( wp.api.models.Users || wp.api.models.User ) ) ) {
+					if ( postData._embedded && postData._embedded.author ) {
+						userAttributes = _.findWhere( postData._embedded.author, { id: postData.author } );
+					}
+					if ( ! userAttributes ) {
+						userAttributes = { id: postData.author };
+					}
+					postData.author = new User( userAttributes );
+				}
+				return postData;
 			} );
 			view.$el.html( view.template( data ) );
 			view.trigger( 'rendered' );
