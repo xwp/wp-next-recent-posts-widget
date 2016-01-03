@@ -43,17 +43,10 @@ var nextRecentPostsWidget = (function( $ ) {
 			data = JSON.parse( $( view.el ).find( '> script[type="application/json"]' ).text() );
 			view.model = new self.WidgetModel( data.instance );
 			view.args = data.args;
-			posts = _.map(
-				data.posts,
-				function( post ) {
-					/*
-					 * Note that map is needed as otherwise an error occurs:
-					 * Uncaught TypeError: post.date.toLocaleDateString is not a function
-					 */
-					return ( wp.api.models.Posts || wp.api.models.Post ).prototype.parse( post );
-				}
-			);
-			view.collection = new wp.api.collections.Posts( posts );
+			view.collection = new wp.api.collections.Posts( data.posts, { parse: true } );
+			if ( ! data.posts ) {
+				view.collection.fetch();
+			}
 
 			view.template = wp.template( 'next-recent-posts-widget' );
 
