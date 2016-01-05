@@ -11,3 +11,5 @@ Next-generation Recent Posts widget which fetches and auto-updates posts via the
 == Description ==
 
 Next-generation Recent Posts widget which fetches posts via the WP REST API, renders then into the widget via JavaScript templates, and provides a JS-driven Customizer control. It will continue fetching the any next new posts every minute.
+
+This plugin was developed to showcase the [Customize REST Resources](https://github.com/xwp/wp-customize-rest-resources) plugin.
