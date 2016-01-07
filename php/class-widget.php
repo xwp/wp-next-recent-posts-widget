@@ -128,9 +128,11 @@ class Widget extends \WP_Widget {
 	/**
 	 * Widget form.
 	 *
+	 * @param array $instance Instance data. Unused.
 	 * @access public
 	 */
-	public function form() {
+	public function form( $instance ) {
+		unset( $instance );
 		if ( 'widgets' === get_current_screen()->base ) {
 			?>
 			<p>
