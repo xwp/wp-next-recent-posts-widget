@@ -33,6 +33,15 @@ var nextRecentPostsWidget = (function( $ ) {
 		)
 	});
 
+	self.PostsCollection = wp.api.collections.Posts.extend({
+		comparator: function( a, b ) {
+			if ( a.get( 'date' ) === b.get( 'date' )  ) {
+				return 0;
+			}
+			return a.get( 'date' ) < b.get( 'date' ) ? 1 : -1;
+		}
+	});
+
 	self.WidgetView = Backbone.View.extend({
 
 		// @todo Try http://stackoverflow.com/a/20419831
@@ -43,7 +52,7 @@ var nextRecentPostsWidget = (function( $ ) {
 			data = JSON.parse( $( view.el ).find( '> script[type="application/json"]' ).text() );
 			view.model = new self.WidgetModel( data.instance );
 			view.args = data.args;
-			view.collection = new wp.api.collections.Posts( data.posts, { parse: true } );
+			view.collection = new self.PostsCollection( data.posts, { parse: true } );
 			view.template = wp.template( 'next-recent-posts-widget' );
 
 			view.collection.fetch = function( options ) {
@@ -66,6 +75,8 @@ var nextRecentPostsWidget = (function( $ ) {
 			};
 
 			view.collection.on( 'change', function() {
+				var collection = this;
+				collection.sort();
 				view.render();
 				// @todo re-sort according to the most options data
 			} );
