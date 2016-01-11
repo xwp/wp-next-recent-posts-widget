@@ -34,11 +34,39 @@ var nextRecentPostsWidget = (function( $ ) {
 	});
 
 	self.PostsCollection = wp.api.collections.Posts.extend({
+
+		defaultQueryParamsData: {
+			_embed: true,
+			order: 'desc',
+			orderby: 'date'
+		},
+
+		/**
+		 * Compare two posts.
+		 *
+		 * @param {Backbone.Model} a
+		 * @param {Backbone.Model} b
+		 * @returns {number}
+		 */
 		comparator: function( a, b ) {
 			if ( a.get( 'date' ) === b.get( 'date' )  ) {
 				return 0;
 			}
 			return a.get( 'date' ) < b.get( 'date' ) ? 1 : -1;
+		},
+
+		/**
+		 * Fetch.
+		 *
+		 * @param {object} [options]
+		 * @param {object} [options.data]
+		 * @returns {*}
+		 */
+		fetch: function( options ) {
+			options = options || {};
+			options.data = options.data || {};
+			_.extend( options.data, this.defaultQueryParamsData );
+			return wp.api.collections.Posts.prototype.fetch.call( this, options );
 		}
 	});
 
@@ -55,19 +83,9 @@ var nextRecentPostsWidget = (function( $ ) {
 			view.collection = new self.PostsCollection( data.posts, { parse: true } );
 			view.template = wp.template( 'next-recent-posts-widget' );
 
-			view.collection.fetch = function( options ) {
-				options = options || {};
-				options.data = options.data || {};
-				_.extend( options.data, {
-					'filter[posts_per_page]': view.model.get( 'number' ),
-					'_embed': true
-				} );
-				return wp.api.collections.Posts.prototype.fetch.call( this, options );
-			};
-
 			watchAuthorChanges = function( post ) {
 				var author = post.get( 'author' );
-				if ( author instanceof ( wp.api.models.Users || wp.api.models.User ) ) {
+				if ( author instanceof wp.api.models.User ) {
 					author.on( 'change', function() {
 						view.render();
 					} );
@@ -78,7 +96,6 @@ var nextRecentPostsWidget = (function( $ ) {
 				var collection = this;
 				collection.sort();
 				view.render();
-				// @todo re-sort according to the most options data
 			} );
 			view.model.on( 'change', function() {
 				view.render();
@@ -90,8 +107,12 @@ var nextRecentPostsWidget = (function( $ ) {
 				view.render();
 			} );
 
-			view.model.on( 'change:number', function() {
-				view.collection.fetch();
+			view.model.on( 'change:number', function( model, number ) {
+				view.collection.fetch( {
+					data: {
+						'filter[posts_per_page]': number
+					}
+				} );
 			} );
 
 			// @todo If we're in the Customizer preview, make sure that this.model gets updated whenever the widget setting gets updated.
@@ -122,21 +143,21 @@ var nextRecentPostsWidget = (function( $ ) {
 		 * Render view.
 		 */
 		render: function() {
-			var view = this, data, User = ( wp.api.models.Users || wp.api.models.User );
+			var view = this, data;
 			data = _.extend( {}, view.args, view.model.attributes );
 			data.posts = view.collection.map( function( model ) {
 				var userAttributes, postData = _.clone( model.attributes );
 				if ( ! ( postData.date instanceof Date ) ) {
 					postData.date = new Date( postData.date );
 				}
-				if ( ! ( postData.author instanceof ( wp.api.models.Users || wp.api.models.User ) ) ) {
+				if ( ! ( postData.author instanceof wp.api.models.User ) ) {
 					if ( postData._embedded && postData._embedded.author ) {
 						userAttributes = _.findWhere( postData._embedded.author, { id: postData.author } );
 					}
 					if ( ! userAttributes ) {
 						userAttributes = { id: postData.author };
 					}
-					postData.author = new User( userAttributes );
+					postData.author = new wp.api.models.User( userAttributes );
 				}
 				return postData;
 			} );
