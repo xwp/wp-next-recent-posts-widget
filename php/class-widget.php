@@ -132,8 +132,9 @@ class Widget extends \WP_Widget {
 	 * @access public
 	 */
 	public function form( $instance ) {
+		global $wp_customize;
 		unset( $instance );
-		if ( 'widgets' === get_current_screen()->base ) {
+		if ( empty( $wp_customize ) ) {
 			?>
 			<p>
 				<?php
