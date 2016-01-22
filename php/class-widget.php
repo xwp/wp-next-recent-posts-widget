@@ -130,6 +130,7 @@ class Widget extends \WP_Widget {
 	 *
 	 * @param array $instance Instance data. Unused.
 	 * @access public
+	 * @return string|null
 	 */
 	public function form( $instance ) {
 		global $wp_customize;
@@ -147,6 +148,7 @@ class Widget extends \WP_Widget {
 			<?php
 			return 'noform';
 		}
+		return null;
 	}
 
 	/**
