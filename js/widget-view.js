@@ -14,7 +14,7 @@ var nextRecentPostsWidget = (function( $ ) {
 		_.extend( self, _nextRecentPostsWidgetExports );
 	}
 
-	self.boot = function () {
+	self.boot = function() {
 		$( self.containerSelector ).each( function() {
 			var widgetContainer, widget;
 			widgetContainer = $( this );
@@ -34,6 +34,9 @@ var nextRecentPostsWidget = (function( $ ) {
 	});
 
 	self.PostsCollection = wp.api.collections.Posts.extend({
+
+		// @todo The following shouldn't be needed.
+		model: wp.api.models.Post,
 
 		defaultQueryParamsData: {
 			_embed: true,
@@ -82,12 +85,15 @@ var nextRecentPostsWidget = (function( $ ) {
 			view.args = data.args;
 			view.collection = new self.PostsCollection( data.posts, { parse: true } );
 			view.template = wp.template( 'next-recent-posts-widget' );
+			view.userPromises = {};
 
 			watchAuthorChanges = function( post ) {
 				var author = post.get( 'author' );
-				if ( author instanceof wp.api.models.User ) {
-					author.on( 'change', function() {
-						view.render();
+				if ( author ) {
+					post.getAuthorUser().done( function( user ) {
+						user.on( 'change', function() {
+							view.render();
+						} );
 					} );
 				}
 			};
@@ -129,7 +135,7 @@ var nextRecentPostsWidget = (function( $ ) {
 			'click .load-more': 'loadMore'
 		},
 
-		loadMore: function () {
+		loadMore: function() {
 			var view = this;
 
 			// Restore focus on the load-more button. (This wouldn't be necessary in React.)
@@ -146,23 +152,28 @@ var nextRecentPostsWidget = (function( $ ) {
 			var view = this, data;
 			data = _.extend( {}, view.args, view.model.attributes );
 			data.posts = view.collection.map( function( model ) {
-				var userAttributes, postData = _.clone( model.attributes );
+				var authorPromise;
+				var postData = _.clone( model.attributes );
 				if ( ! ( postData.date instanceof Date ) ) {
 					postData.date = new Date( postData.date );
 				}
-				if ( ! ( postData.author instanceof wp.api.models.User ) ) {
-					if ( postData._embedded && postData._embedded.author ) {
-						userAttributes = _.findWhere( postData._embedded.author, { id: postData.author } );
+				if ( model.get( 'author' ) && model.getAuthorUser ) {
+					authorPromise = view.userPromises[ model.get( 'author' ) ];
+					if ( ! authorPromise ) {
+						authorPromise = model.getAuthorUser();
+						view.userPromises[ model.get( 'author' ) ] = authorPromise;
 					}
-					if ( ! userAttributes ) {
-						userAttributes = { id: postData.author };
-					}
-					postData.author = new wp.api.models.User( userAttributes );
+					authorPromise.done( function( user ) {
+						postData.author = user;
+					} );
 				}
 				return postData;
 			} );
-			view.$el.html( view.template( data ) );
-			view.trigger( 'rendered' );
+
+			$.when.apply( null, _.values( view.userPromises ) ).then( function() {
+				view.$el.html( view.template( data ) );
+				view.trigger( 'rendered' );
+			} );
 		}
 
 	});
@@ -172,7 +183,4 @@ var nextRecentPostsWidget = (function( $ ) {
 	});
 
 	return self;
-}( jQuery ));
-
-
-
+}( jQuery ) );

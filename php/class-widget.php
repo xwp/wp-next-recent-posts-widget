@@ -211,7 +211,7 @@ class Widget extends \WP_Widget {
 						<# if ( data.show_date ) { #>
 							(<time datetime="{{ post.date }}">{{ post.date.toLocaleDateString() }}</time>)
 						<# } #>
-						<# if ( data.show_author ) { #>
+						<# if ( data.show_author && _.isObject( post.author ) ) { #>
 							{{ post.author.attributes.name }}
 						<# } #>
 					</li>
