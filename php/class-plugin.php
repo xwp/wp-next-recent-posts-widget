@@ -25,9 +25,7 @@ class Plugin extends Plugin_Base {
 	public function __construct() {
 		$this->plugin_file = dirname( __DIR__ ) . '/next-recent-posts-widget.php';
 		parent::__construct();
-
-		$priority = 9; // Because WP_Customize_Widgets::register_settings() happens at after_setup_theme priority 10.
-		add_action( 'after_setup_theme', array( $this, 'init' ), $priority );
+		add_action( 'after_setup_theme', array( $this, 'init' ) );
 	}
 
 	/**
@@ -73,15 +71,6 @@ class Plugin extends Plugin_Base {
 		$src = $this->dir_url . '/js/widget-view.js';
 		$deps = array( 'backbone', 'wp-api', 'wp-util' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
-
-		$exports = array(
-			'postsPerPage' => (int) get_option( 'posts_per_page' ),
-		);
-		$wp_scripts->add_data(
-			$handle,
-			'data',
-			sprintf( 'var _nextRecentPostsWidgetExports = %s;', wp_json_encode( $exports ) )
-		);
 	}
 
 	/**
@@ -124,17 +113,23 @@ class Plugin extends Plugin_Base {
 	/**
 	 * Export the container selector and default instance data for the widget.
 	 *
-	 * @action widgets_init, 90
+	 * @action wp_enqueue_scripts
 	 */
-	public function export_widget_types() {
-		$container_selector = '.' . $this->widget->widget_options['classname'];
+	public function enqueue_view_scripts() {
 
 		$handle = 'next-recent-posts-widget-view';
-		$wp_scripts = wp_scripts();
-		$data = $wp_scripts->get_data( $handle, 'data' );
-		$data .= sprintf( '_nextRecentPostsWidgetExports.containerSelector = %s;', wp_json_encode( $container_selector ) );
-		$data .= sprintf( '_nextRecentPostsWidgetExports.defaultInstanceData = %s;', wp_json_encode( $this->widget->get_default_instance() ) );
-		$wp_scripts->add_data( $handle, 'data', $data );
+		wp_enqueue_script( $handle );
+		wp_enqueue_style( $handle );
+
+		$exports = array(
+			'postsPerPage' => (int) get_option( 'posts_per_page' ),
+			'containerSelector' => '.' . $this->widget->widget_options['classname'],
+			'defaultInstanceData' => $this->widget->get_default_instance(),
+		);
+		wp_scripts()->add_inline_script(
+			$handle,
+			sprintf( 'nextRecentPostsWidget.init( %s )', wp_json_encode( $exports ) )
+		);
 	}
 
 	/**

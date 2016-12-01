@@ -80,8 +80,6 @@ class Widget extends \WP_Widget {
 		}
 		parent::__construct( $id_base, $name, $widget_options, $control_options );
 
-		wp_enqueue_script( 'next-recent-posts-widget-view' );
-		wp_enqueue_style( 'next-recent-posts-widget-view' );
 		add_action( 'wp_footer', array( $this, 'print_templates' ) );
 	}
 

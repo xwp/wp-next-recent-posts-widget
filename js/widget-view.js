@@ -1,4 +1,4 @@
-/* global Backbone, _, _nextRecentPostsWidgetExports */
+/* global Backbone, _ */
 /* exported nextRecentPostsWidget */
 
 var nextRecentPostsWidget = (function( $ ) {
@@ -10,18 +10,21 @@ var nextRecentPostsWidget = (function( $ ) {
 		defaultInstanceData: {}
 	};
 
-	if ( 'undefined' !== typeof _nextRecentPostsWidgetExports ) {
-		_.extend( self, _nextRecentPostsWidgetExports );
-	}
-
-	self.boot = function() {
-		self.setUpWidgets( document.body );
-
-		if ( 'undefined' !== typeof wp && 'undefined' !== typeof wp.customize && typeof 'undefined' !== wp.customize.selectiveRefresh ) {
-			wp.customize.selectiveRefresh.bind( 'partial-content-rendered', function( placement ) {
-				self.setUpWidgets( placement.container );
-			} );
+	self.init = function init( data ) {
+		if ( data ) {
+			_.extend( self, data );
 		}
+		$( function() {
+			wp.api.loadPromise.done( function() {
+				self.setUpWidgets( document.body );
+
+				if ( 'undefined' !== typeof wp && 'undefined' !== typeof wp.customize && typeof 'undefined' !== wp.customize.selectiveRefresh ) {
+					wp.customize.selectiveRefresh.bind( 'partial-content-rendered', function( placement ) {
+						self.setUpWidgets( placement.container );
+					} );
+				}
+			} );
+		} );
 	};
 
 	self.setUpWidgets = function setUpWidgets( root ) {
@@ -191,12 +194,6 @@ var nextRecentPostsWidget = (function( $ ) {
 			} );
 		}
 
-	});
-
-	$(function() {
-		wp.api.loadPromise.done( function() {
-			self.boot();
-		});
 	});
 
 	return self;
