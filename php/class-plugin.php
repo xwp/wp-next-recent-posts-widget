@@ -57,7 +57,7 @@ class Plugin extends Plugin_Base {
 	public function show_missing_rest_api_admin_notice() {
 		?>
 		<div class="error">
-			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the WordPress REST API to be available and enabled.', 'next-recent-posts-widget' ); ?></p>
+			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the WordPress REST API to be available and enabled, including WordPress 4.7 or the REST API plugin.', 'next-recent-posts-widget' ); ?></p>
 		</div>
 		<?php
 	}
