@@ -112,6 +112,10 @@ class Widget extends \WP_Widget {
 
 		$response = $wp_rest_server->dispatch( $request );
 		if ( ! $response->is_error() ) {
+
+			/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
+			$response = apply_filters( 'rest_post_dispatch', rest_ensure_response( $response ), $wp_rest_server, $request );
+
 			$data['posts'] = $wp_rest_server->response_to_data( $response, true );
 			$instance['has_more'] = ( $instance['number'] < $response->headers['X-WP-Total'] );
 		}
