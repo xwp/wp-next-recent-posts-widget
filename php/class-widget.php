@@ -37,7 +37,9 @@ class Widget extends \WP_Widget {
 	 * @access public
 	 * @var array
 	 */
-	public $widget_options = array();
+	public $widget_options = array(
+		'customize_selective_refresh' => true,
+	);
 
 	/**
 	 * Option array passed to {@see wp_register_widget_control()}.
@@ -122,10 +124,14 @@ class Widget extends \WP_Widget {
 
 		$data['instance'] = $instance;
 
+		$args['before_widget'] = preg_replace(
+			'/^(\s*<\w+\s+)/',
+			sprintf( '$1 data-embedded="%s"', esc_attr( wp_json_encode( $data ) ) ),
+			$args['before_widget'],
+			1 // Limit.
+		);
+
 		echo $args['before_widget']; // WPCS: xss ok.
-		echo '<script type="application/json">';
-		echo wp_json_encode( $data );
-		echo '</script>';
 		echo $args['after_widget']; // WPCS: xss ok.
 	}
 

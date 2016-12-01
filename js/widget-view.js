@@ -15,7 +15,22 @@ var nextRecentPostsWidget = (function( $ ) {
 	}
 
 	self.boot = function() {
-		$( self.containerSelector ).each( function() {
+		self.setUpWidgets( document.body );
+
+		if ( 'undefined' !== typeof wp && 'undefined' !== typeof wp.customize && typeof 'undefined' !== wp.customize.selectiveRefresh ) {
+			wp.customize.selectiveRefresh.bind( 'partial-content-rendered', function( placement ) {
+				self.setUpWidgets( placement.container );
+			} );
+		}
+	};
+
+	self.setUpWidgets = function setUpWidgets( root ) {
+		var rootContainer = $( root || document.body ), containers;
+		containers = rootContainer.find( self.containerSelector );
+		if ( rootContainer.is( self.containerSelector ) ) {
+			containers = containers.add( self.containerSelector );
+		}
+		containers.each( function() {
 			var widgetContainer, widget;
 			widgetContainer = $( this );
 			widget = new self.WidgetView( { el: widgetContainer.get() } );
@@ -80,7 +95,7 @@ var nextRecentPostsWidget = (function( $ ) {
 		initialize: function() {
 			var view = this, data, watchAuthorChanges;
 
-			data = JSON.parse( $( view.el ).find( '> script[type="application/json"]' ).text() );
+			data = $( view.el ).data( 'embedded' ) || {};
 			view.model = new self.WidgetModel( data.instance );
 			view.args = data.args;
 			view.collection = new self.PostsCollection( data.posts, { parse: true } );
