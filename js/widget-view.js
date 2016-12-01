@@ -89,7 +89,7 @@ var nextRecentPostsWidget = (function( $ ) {
 
 			watchAuthorChanges = function( post ) {
 				var author = post.get( 'author' );
-				if ( author ) {
+				if ( author && post.getAuthorUser ) { // @todo Why wouldn't it be defined?
 					post.getAuthorUser().done( function( user ) {
 						user.on( 'change', function() {
 							view.render();
@@ -179,7 +179,9 @@ var nextRecentPostsWidget = (function( $ ) {
 	});
 
 	$(function() {
-		self.boot();
+		wp.api.loadPromise.done( function() {
+			self.boot();
+		});
 	});
 
 	return self;
