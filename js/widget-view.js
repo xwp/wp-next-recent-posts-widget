@@ -1,4 +1,4 @@
-/* global Backbone, _, _nextRecentPostsWidgetExports, JSON */
+/* global Backbone, _, _nextRecentPostsWidgetExports */
 /* exported nextRecentPostsWidget */
 
 var nextRecentPostsWidget = (function( $ ) {
