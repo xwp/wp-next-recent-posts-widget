@@ -34,28 +34,25 @@ class Plugin extends Plugin_Base {
 	 * @action after_setup_theme
 	 */
 	public function init() {
-		if ( ! defined( 'REST_API_VERSION' ) || ! class_exists( 'WP_REST_Posts_Controller' ) || ! apply_filters( 'rest_enabled', true ) ) {
-			add_action( 'admin_notices', array( $this, 'show_missing_rest_api_admin_notice' ) );
+		if ( ! defined( 'REST_API_VERSION' ) || ! class_exists( 'WP_REST_Posts_Controller' ) || ! apply_filters( 'rest_enabled', true ) || ! class_exists( 'WP_JS_Widget' ) ) {
+			add_action( 'admin_notices', array( $this, 'show_missing_dependencies_notice' ) );
 			return;
 		}
-
-		$this->config = apply_filters( 'next_recent_posts_widget_plugin_config', $this->config, $this );
 
 		add_action( 'wp_default_scripts', array( $this, 'register_scripts' ), 11 );
 		add_action( 'wp_default_styles', array( $this, 'register_styles' ), 11 );
 		add_action( 'widgets_init', array( $this, 'register_widget' ) );
-		add_action( 'widgets_init', array( $this, 'export_widget_types' ), 90 );
 	}
 
 	/**
-	 * Show error when REST API is not available.
+	 * Show error when REST API and JS Widgets plugins are not available.
 	 *
 	 * @action admin_notices
 	 */
-	public function show_missing_rest_api_admin_notice() {
+	public function show_missing_dependencies_notice() {
 		?>
 		<div class="error">
-			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the WordPress REST API to be available and enabled, including WordPress 4.7 or the REST API plugin.', 'next-recent-posts-widget' ); ?></p>
+			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the JS Widgets plugin to be active as well as it requires the WordPress REST API to be available and enabled, including WordPress 4.7 or the REST API plugin.', 'next-recent-posts-widget' ); ?></p>
 		</div>
 		<?php
 	}
@@ -70,6 +67,11 @@ class Plugin extends Plugin_Base {
 		$handle = 'next-recent-posts-widget-view';
 		$src = $this->dir_url . '/js/widget-view.js';
 		$deps = array( 'backbone', 'wp-api', 'wp-util' );
+		$wp_scripts->add( $handle, $src, $deps, $this->version );
+
+		$handle = 'next-recent-posts-widget-control';
+		$src = $this->dir_url . '/js/widget-control.js';
+		$deps = array( 'customize-js-widgets' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
 	}
 
@@ -92,66 +94,7 @@ class Plugin extends Plugin_Base {
 	 * @action widgets_init, 10
 	 */
 	public function register_widget() {
-		global $wp_widget_factory;
-		$class_name = __NAMESPACE__ . '\\Widget';
-		register_widget( $class_name );
-		$this->widget = $wp_widget_factory->widgets[ $class_name ];
-		$this->widget->plugin = $this;
-
-		/*
-		 * Note: Once register_widget() allows pre-instantiated widgets to be
-		 * passed into register_widget(), this can be simplified to:
-		 *
-		 *   $this->widget = new Widget();
-		 *   $this->widget->plugin = $this;
-		 *   register_widget( $this->widget );
-		 *
-		 * See https://core.trac.wordpress.org/ticket/28216
-		 */
-	}
-
-	/**
-	 * Export the container selector and default instance data for the widget.
-	 *
-	 * @action wp_enqueue_scripts
-	 */
-	public function enqueue_view_scripts() {
-
-		$handle = 'next-recent-posts-widget-view';
-		wp_enqueue_script( $handle );
-		wp_enqueue_style( $handle );
-
-		$exports = array(
-			'postsPerPage' => (int) get_option( 'posts_per_page' ),
-			'containerSelector' => '.' . $this->widget->widget_options['classname'],
-			'defaultInstanceData' => $this->widget->get_default_instance(),
-		);
-		wp_scripts()->add_inline_script(
-			$handle,
-			sprintf( 'nextRecentPostsWidget.init( %s )', wp_json_encode( $exports ) )
-		);
-	}
-
-	/**
-	 * Get instance of WP_REST_Server.
-	 *
-	 * @return \WP_REST_Server
-	 */
-	public function get_rest_server() {
-		/**
-		 * REST Server.
-		 *
-		 * @var \WP_REST_Server $wp_rest_server
-		 */
-		global $wp_rest_server;
-		if ( empty( $wp_rest_server ) ) {
-			/** This filter is documented in wp-includes/rest-api.php */
-			$wp_rest_server_class = apply_filters( 'wp_rest_server_class', 'WP_REST_Server' );
-			$wp_rest_server = new $wp_rest_server_class();
-
-			/** This filter is documented in wp-includes/rest-api.php */
-			do_action( 'rest_api_init', $wp_rest_server );
-		}
-		return $wp_rest_server;
+		$this->widget = new Widget( $this );
+		register_widget( $this->widget );
 	}
 }

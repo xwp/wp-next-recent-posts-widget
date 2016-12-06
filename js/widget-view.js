@@ -3,198 +3,251 @@
 
 var nextRecentPostsWidget = (function( $ ) {
 
-	var self = {
-		widgets: [],
+	var component = {
+		widgets: {},
+		idBase: '',
 		postsPerPage: 5,
 		containerSelector: '',
-		defaultInstanceData: {}
+		renderTemplateId: '',
+		defaultInstanceData: {},
+		isCustomizePreview: false
 	};
 
-	self.init = function init( data ) {
+	component.init = function init( data ) {
 		if ( data ) {
-			_.extend( self, data );
+			_.extend( component, data );
 		}
+
+		// @todo Extend to disable self.WidgetPartial
+
+		if ( component.isCustomizePreview ) {
+			component.extendWidgetPartial();
+		}
+
 		$( function() {
 			wp.api.loadPromise.done( function() {
-				self.setUpWidgets( document.body );
+				component.createModels();
+				component.setUpWidgets( document.body );
 
+				// @todo The widget instance should be fetched from the server. Selective refresh can return just the rendered data, or we can override to fetch the instance from the rest api.
 				if ( 'undefined' !== typeof wp && 'undefined' !== typeof wp.customize && typeof 'undefined' !== wp.customize.selectiveRefresh ) {
 					wp.customize.selectiveRefresh.bind( 'partial-content-rendered', function( placement ) {
-						self.setUpWidgets( placement.container );
+						component.setUpWidgets( placement.container );
 					} );
 				}
 			} );
 		} );
 	};
 
-	self.setUpWidgets = function setUpWidgets( root ) {
+	/**
+	 * Extend widget partial.
+	 */
+	component.extendWidgetPartial = function extendWidgetPartial() {
+		var WidgetPartial = wp.customize.selectiveRefresh.partialConstructor.widget;
+
+		WidgetPartial.prototype.refresh = (function( originalRefresh ) {
+			return function() {
+				var partial = this, settingValue;
+				if ( component.idBase !== partial.widgetIdParts.idBase || ! component.widgets[ partial.widgetId ] ) {
+					return originalRefresh.call( partial );
+				}
+
+				// @todo Need to fetch the rendered data from the server.
+				settingValue = _.clone( wp.customize( partial.params.settings[0] ).get() );
+				component.widgets[ partial.widgetId ].model.set( settingValue );
+
+				return $.Deferred().resolve().promise();
+			};
+		})( WidgetPartial.prototype.refresh );
+	};
+
+	/**
+	 * Set up widgets.
+	 *
+	 * @param {jQuery|Element} [root] Root element to search for widget containers.
+	 * @returns {jQuery} Containers found.
+	 */
+	component.setUpWidgets = function setUpWidgets( root ) {
 		var rootContainer = $( root || document.body ), containers;
-		containers = rootContainer.find( self.containerSelector );
-		if ( rootContainer.is( self.containerSelector ) ) {
-			containers = containers.add( self.containerSelector );
+		containers = rootContainer.find( component.containerSelector );
+		if ( rootContainer.is( component.containerSelector ) ) {
+			containers = containers.add( component.containerSelector );
 		}
 		containers.each( function() {
-			var widgetContainer, widget;
+			var widgetContainer, widget, widgetId;
 			widgetContainer = $( this );
-			widget = new self.WidgetView( { el: widgetContainer.get() } );
-			self.widgets.push( widget );
+			widgetId = widgetContainer.data( 'embedded' ).args.widget_id;
+			if ( ! component.widgets[ widgetId ] ) {
+				widget = new component.WidgetView( { el: widgetContainer.get() } );
+				component.widgets[ widgetId ] = widget;
+			}
 		} );
+		return containers;
 	};
 
-	self.WidgetModel = Backbone.Model.extend({
-		defaults: _.extend(
-			{},
-			self.defaultInstanceData,
-			{
-				has_more: false
+	/**
+	 * Create models.
+	 *
+	 * @returns {void}
+	 */
+	component.createModels = function createModels() {
+
+		component.WidgetModel = Backbone.Model.extend({
+			defaults: _.extend(
+				{},
+				component.defaultInstanceData,
+				{
+					has_more: false
+				}
+			)
+		});
+
+		component.PostsCollection = wp.api.collections.Posts.extend({
+
+			// @todo The following shouldn't be needed.
+			// model: wp.api.models.Post,
+
+			defaultQueryParamsData: {
+				_embed: true,
+				order: 'desc',
+				orderby: 'date'
+			},
+
+			/**
+			 * Compare two posts.
+			 *
+			 * @param {Backbone.Model} a
+			 * @param {Backbone.Model} b
+			 * @returns {number}
+			 */
+			comparator: function( a, b ) {
+				if ( a.get( 'date' ) === b.get( 'date' )  ) {
+					return 0;
+				}
+				return a.get( 'date' ) < b.get( 'date' ) ? 1 : -1;
+			},
+
+			/**
+			 * Fetch.
+			 *
+			 * @param {object} [options]
+			 * @param {object} [options.data]
+			 * @returns {*}
+			 */
+			fetch: function( options ) {
+				options = options || {};
+				options.data = options.data || {};
+				_.extend( options.data, this.defaultQueryParamsData );
+				return wp.api.collections.Posts.prototype.fetch.call( this, options );
 			}
-		)
-	});
+		});
 
-	self.PostsCollection = wp.api.collections.Posts.extend({
+		component.WidgetView = Backbone.View.extend({
 
-		// @todo The following shouldn't be needed.
-		model: wp.api.models.Post,
+			// @todo Try http://stackoverflow.com/a/20419831
 
-		defaultQueryParamsData: {
-			_embed: true,
-			order: 'desc',
-			orderby: 'date'
-		},
+			initialize: function() {
+				var view = this, data, watchAuthorChanges;
 
-		/**
-		 * Compare two posts.
-		 *
-		 * @param {Backbone.Model} a
-		 * @param {Backbone.Model} b
-		 * @returns {number}
-		 */
-		comparator: function( a, b ) {
-			if ( a.get( 'date' ) === b.get( 'date' )  ) {
-				return 0;
-			}
-			return a.get( 'date' ) < b.get( 'date' ) ? 1 : -1;
-		},
+				data = $( view.el ).data( 'embedded' ) || {};
+				view.model = new component.WidgetModel( data.instance );
+				view.args = data.args;
+				view.collection = new component.PostsCollection( data.posts, { parse: true } );
+				view.template = wp.template( component.renderTemplateId );
+				view.userPromises = {};
 
-		/**
-		 * Fetch.
-		 *
-		 * @param {object} [options]
-		 * @param {object} [options.data]
-		 * @returns {*}
-		 */
-		fetch: function( options ) {
-			options = options || {};
-			options.data = options.data || {};
-			_.extend( options.data, this.defaultQueryParamsData );
-			return wp.api.collections.Posts.prototype.fetch.call( this, options );
-		}
-	});
-
-	self.WidgetView = Backbone.View.extend({
-
-		// @todo Try http://stackoverflow.com/a/20419831
-
-		initialize: function() {
-			var view = this, data, watchAuthorChanges;
-
-			data = $( view.el ).data( 'embedded' ) || {};
-			view.model = new self.WidgetModel( data.instance );
-			view.args = data.args;
-			view.collection = new self.PostsCollection( data.posts, { parse: true } );
-			view.template = wp.template( 'next-recent-posts-widget' );
-			view.userPromises = {};
-
-			watchAuthorChanges = function( post ) {
-				var author = post.get( 'author' );
-				if ( author && post.getAuthorUser ) { // @todo Why wouldn't it be defined?
-					post.getAuthorUser().done( function( user ) {
-						user.on( 'change', function() {
-							view.render();
+				watchAuthorChanges = function( post ) {
+					var author = post.get( 'author' );
+					if ( author && post.getAuthorUser ) { // @todo Why wouldn't it be defined?
+						post.getAuthorUser().done( function( user ) {
+							user.on( 'change', function() {
+								view.render();
+							} );
 						} );
-					} );
-				}
-			};
-
-			view.collection.on( 'change', function() {
-				var collection = this;
-				collection.sort();
-				view.render();
-			} );
-			view.model.on( 'change', function() {
-				view.render();
-			} );
-			view.collection.on( 'add', watchAuthorChanges );
-			view.collection.each( watchAuthorChanges );
-			view.collection.on( 'sync', function( collection ) {
-				view.model.set( 'has_more', collection.hasMore() );
-				view.render();
-			} );
-
-			view.model.on( 'change:number', function( model, number ) {
-				view.collection.fetch( {
-					data: {
-						'filter[posts_per_page]': number
 					}
+				};
+
+				view.collection.on( 'change', function() {
+					var collection = this;
+					collection.sort();
+					view.render();
 				} );
-			} );
+				view.model.on( 'change', function() {
+					view.render();
+				} );
+				view.collection.on( 'add', watchAuthorChanges );
+				view.collection.each( watchAuthorChanges );
+				view.collection.on( 'sync', function( collection ) {
+					view.model.set( 'has_more', collection.hasMore() );
+					view.render();
+				} );
 
-			// @todo If we're in the Customizer preview, make sure that this.model gets updated whenever the widget setting gets updated.
+				view.model.on( 'change:number', function( model, number ) {
+					view.collection.fetch( {
+						data: {
+							'per_page': number
+						}
+					} );
+				} );
 
-			if ( ! data.posts ) {
-				view.collection.fetch();
+				// @todo If we're in the Customizer preview, make sure that this.model gets updated whenever the widget setting gets updated.
+
+				if ( ! data.posts ) {
+					view.collection.fetch();
+				}
+
+				view.render();
+				view.render = _.debounce( view.render );
+			},
+
+			events: {
+				'click .load-more': 'loadMore'
+			},
+
+			loadMore: function() {
+				var view = this;
+
+				// Restore focus on the load-more button. (This wouldn't be necessary in React.)
+				view.once( 'rendered', function() {
+					view.$el.find( '.load-more' ).focus();
+				} );
+				view.model.set( 'number', view.model.get( 'number' ) + component.postsPerPage );
+			},
+
+			/**
+			 * Render view.
+			 */
+			render: function() {
+				var view = this, data;
+				data = _.extend( {}, view.args, view.model.attributes );
+				data.posts = view.collection.map( function( model ) {
+					var authorPromise;
+					var postData = _.clone( model.attributes );
+					if ( ! ( postData.date instanceof Date ) ) {
+						postData.date = new Date( postData.date );
+					}
+					if ( model.get( 'author' ) && model.getAuthorUser ) {
+						authorPromise = view.userPromises[ model.get( 'author' ) ];
+						if ( ! authorPromise ) {
+							authorPromise = model.getAuthorUser();
+							view.userPromises[ model.get( 'author' ) ] = authorPromise;
+						}
+						authorPromise.done( function( user ) {
+							postData.author = user;
+						} );
+					}
+					return postData;
+				} );
+
+				$.when.apply( null, _.values( view.userPromises ) ).then( function() {
+					view.$el.find( '> :not(.customize-partial-edit-shortcut)' ).remove();
+					view.$el.append( $( view.template( data ) ) );
+					view.trigger( 'rendered' );
+				} );
 			}
 
-			view.render();
-			view.render = _.debounce( view.render );
-		},
+		});
+	};
 
-		events: {
-			'click .load-more': 'loadMore'
-		},
-
-		loadMore: function() {
-			var view = this;
-
-			// Restore focus on the load-more button. (This wouldn't be necessary in React.)
-			view.once( 'rendered', function() {
-				view.$el.find( '.load-more' ).focus();
-			} );
-			view.model.set( 'number', view.model.get( 'number' ) + self.postsPerPage );
-		},
-
-		/**
-		 * Render view.
-		 */
-		render: function() {
-			var view = this, data;
-			data = _.extend( {}, view.args, view.model.attributes );
-			data.posts = view.collection.map( function( model ) {
-				var authorPromise;
-				var postData = _.clone( model.attributes );
-				if ( ! ( postData.date instanceof Date ) ) {
-					postData.date = new Date( postData.date );
-				}
-				if ( model.get( 'author' ) && model.getAuthorUser ) {
-					authorPromise = view.userPromises[ model.get( 'author' ) ];
-					if ( ! authorPromise ) {
-						authorPromise = model.getAuthorUser();
-						view.userPromises[ model.get( 'author' ) ] = authorPromise;
-					}
-					authorPromise.done( function( user ) {
-						postData.author = user;
-					} );
-				}
-				return postData;
-			} );
-
-			$.when.apply( null, _.values( view.userPromises ) ).then( function() {
-				view.$el.html( view.template( data ) );
-				view.trigger( 'rendered' );
-			} );
-		}
-
-	});
-
-	return self;
+	return component;
 }( jQuery ) );
