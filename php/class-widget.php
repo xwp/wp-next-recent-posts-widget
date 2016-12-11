@@ -316,7 +316,6 @@ class Widget extends \WP_JS_Widget {
 			$response = apply_filters( 'rest_post_dispatch', rest_ensure_response( $response ), $wp_rest_server, $request );
 
 			$data['posts'] = $wp_rest_server->response_to_data( $response, true );
-			$instance['has_more'] = ( $instance['number'] < $response->headers['X-WP-Total'] );
 		}
 
 		$data['instance'] = $instance;
@@ -399,12 +398,6 @@ class Widget extends \WP_JS_Widget {
 					</li>
 				<# } ); #>
 			</ol>
-			<# if ( data.has_more ) { #>
-				<p>
-					<button class="load-more" type="button">More</button>
-					<span class="spinner"></span>
-				</p>
-			<# } #>
 		</script>
 		<?php
 	}

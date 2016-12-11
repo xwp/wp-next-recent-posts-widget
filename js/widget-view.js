@@ -95,10 +95,7 @@ var nextRecentPostsWidget = (function( $ ) {
 		component.WidgetModel = Backbone.Model.extend({
 			defaults: _.extend(
 				{},
-				component.defaultInstanceData,
-				{
-					has_more: false
-				}
+				component.defaultInstanceData
 			)
 		});
 
@@ -181,8 +178,7 @@ var nextRecentPostsWidget = (function( $ ) {
 				} );
 				view.collection.on( 'add', watchAuthorChanges );
 				view.collection.each( watchAuthorChanges );
-				view.collection.on( 'sync', function( collection ) {
-					view.model.set( 'has_more', collection.hasMore() );
+				view.collection.on( 'sync', function() {
 					view.render();
 				} );
 
