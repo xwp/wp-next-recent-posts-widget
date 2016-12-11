@@ -52,7 +52,7 @@ var nextRecentPostsWidget = (function( $ ) {
 					return originalRefresh.call( partial );
 				}
 
-				// @todo Need to fetch the rendered data from the server.
+				// @todo Still need to fetch the rendered data from the server, but we don't need to use the normal renderContent.
 				settingValue = _.clone( wp.customize( partial.params.settings[0] ).get() );
 				component.widgets[ partial.widgetId ].model.set( settingValue );
 
@@ -102,10 +102,14 @@ var nextRecentPostsWidget = (function( $ ) {
 			)
 		});
 
+		if ( component.isCustomizePreview ) {
+			component.previewPostModel();
+		}
+
 		component.PostsCollection = wp.api.collections.Posts.extend({
 
-			// @todo The following shouldn't be needed.
-			// model: wp.api.models.Post,
+			// @todo Why is this necessary? If not supplied, then the Model is not instantiated for each.
+			model: wp.api.models.Post,
 
 			defaultQueryParamsData: {
 				_embed: true,
@@ -190,8 +194,6 @@ var nextRecentPostsWidget = (function( $ ) {
 					} );
 				} );
 
-				// @todo If we're in the Customizer preview, make sure that this.model gets updated whenever the widget setting gets updated.
-
 				if ( ! data.posts ) {
 					view.collection.fetch();
 				}
@@ -247,6 +249,36 @@ var nextRecentPostsWidget = (function( $ ) {
 			}
 
 		});
+	};
+
+	/**
+	 * Hook up post model in Backbone with post setting in customizer.
+	 *
+	 * @todo Prevent selective refresh requests or piggy-back on selective refresh requests to obtain newly-rendered values.
+	 *
+	 * @returns {void}
+	 */
+	component.previewPostModel = function previewPostModel() {
+		var originalInitialize = wp.api.models.Post.prototype.initialize;
+
+		wp.api.models.Post.prototype.initialize = function( attributes, options ) {
+			var model = this, settingId;
+			originalInitialize.call( model, attributes, options );
+
+			settingId = 'post[' + model.get( 'type' ) + '][' + String( model.id ) + ']';
+			wp.customize( settingId, function( postSetting ) {
+				var updateModel = function( postData ) {
+					model.set( {
+						title: {
+							raw: postData.post_title,
+							rendered: postData.post_title // Raw value used temporarily until new value fetched from server.
+						}
+					} );
+				};
+				updateModel( postSetting.get() );
+				postSetting.bind( updateModel );
+			} );
+		};
 	};
 
 	return component;

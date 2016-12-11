@@ -40,6 +40,13 @@ class Widget extends \WP_JS_Widget {
 		parent::__construct();
 
 		add_action( 'wp_footer', array( $this, 'render_template' ) );
+
+		// @todo This should be smarter.
+		// @todo Can this return the rendered title as part of the response?
+		add_filter( 'customize_posts_partial_schema', function( $schema ) {
+			$schema['post_title']['fallback_refresh'] = false;
+			return $schema;
+		} );
 	}
 	/**
 	 * Enqueue scripts needed for the controls.
