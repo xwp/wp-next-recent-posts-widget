@@ -349,8 +349,8 @@ class Widget extends \WP_JS_Widget {
 				<input id="{{ data.element_id_base }}_title" class="widefat" type="text" name="title">
 			</p>
 			<p>
-				<input id="{{ data.element_id_base }}_number" class="widefat" type="checkbox" name="number" type="number" min="1" max="100">
 				<label for="{{ data.element_id_base }}_number"><?php esc_html_e( 'Number', 'next-recent-posts-widget' ) ?></label>
+				<input id="{{ data.element_id_base }}_number" name="number" type="number" min="1" max="<?php echo esc_attr( get_option( 'posts_per_page' ) ) ?>" size="3">
 			</p>
 			<p>
 				<input id="{{ data.element_id_base }}_show_date" class="widefat" type="checkbox" name="show_date">
@@ -380,7 +380,7 @@ class Widget extends \WP_JS_Widget {
 				{{{ data.after_title }}}
 			<# } #>
 			<ol>
-				<# _.each( data.posts, function( post ) { #>
+				<# _.each( data.posts.slice( 0, data.number ), function( post ) { #>
 					<li>
 						<a href="{{ post.link }}">{{{ post.title.rendered }}}</a>
 						<# if ( data.show_date ) { #>
