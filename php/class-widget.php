@@ -38,15 +38,6 @@ class Widget extends \WP_JS_Widget {
 			$this->name = __( 'Next Recent Posts', 'next-recent-posts-widget' );
 		}
 		parent::__construct();
-
-		add_action( 'wp_footer', array( $this, 'render_template' ) );
-
-		// @todo This should be smarter.
-		// @todo Can this return the rendered title as part of the response?
-		add_filter( 'customize_posts_partial_schema', function( $schema ) {
-			$schema['post_title']['fallback_refresh'] = false;
-			return $schema;
-		} );
 	}
 	/**
 	 * Enqueue scripts needed for the controls.
@@ -137,6 +128,15 @@ class Widget extends \WP_JS_Widget {
 					'validate_callback' => 'rest_validate_request_arg',
 				),
 			),
+			'show_excerpt' => array(
+				'description' => __( 'Whether the excerpt is shown.', 'next-recent-posts-widget' ),
+				'type' => 'boolean',
+				'default' => false,
+				'context' => array( 'view', 'edit', 'embed' ),
+				'arg_options' => array(
+					'validate_callback' => 'rest_validate_request_arg',
+				),
+			),
 			'show_featured_image' => array(
 				'description' => __( 'Whether the featured image is shown.', 'next-recent-posts-widget' ),
 				'type' => 'boolean',
@@ -191,6 +191,7 @@ class Widget extends \WP_JS_Widget {
 			'show_date' => $instance['show_date'],
 			'show_featured_image' => $instance['show_featured_image'],
 			'show_author' => $instance['show_author'],
+			'show_excerpt' => $instance['show_excerpt'],
 		);
 
 		return $item;
@@ -272,7 +273,7 @@ class Widget extends \WP_JS_Widget {
 		unset( $old_instance );
 		$instance = array_merge( $this->get_default_instance(), $new_instance );
 		$instance['title'] = sanitize_text_field( $instance['title'] );
-		foreach ( array( 'show_date', 'show_featured_image', 'show_author' ) as $field ) {
+		foreach ( array( 'show_date', 'show_featured_image', 'show_author', 'show_excerpt' ) as $field ) {
 			$instance[ $field ] = boolval( $instance[ $field ] );
 		}
 		return $instance;
@@ -308,6 +309,11 @@ class Widget extends \WP_JS_Widget {
 		$request->set_query_params( array(
 			'per_page' => $instance['number'],
 		) );
+		if ( current_user_can( 'edit_posts' ) && is_customize_preview() ) {
+			$request->set_query_params( array(
+				'context' => 'edit',
+			) );
+		}
 
 		$response = $wp_rest_server->dispatch( $request );
 		if ( ! $response->is_error() ) {
@@ -367,7 +373,11 @@ class Widget extends \WP_JS_Widget {
 				<label for="{{ data.element_id_base }}_show_author"><?php esc_html_e( 'Show author', 'next-recent-posts-widget' ) ?></label>
 			</p>
 			<p>
-				<input id="{{ data.element_id_base }}_show_featured_image" class="widefat" type="checkbox" name="show_featured_image">
+				<input id="{{ data.element_id_base }}_show_excerpt" class="widefat" type="checkbox" name="show_excerpt">
+				<label for="{{ data.element_id_base }}_show_excerpt"><?php esc_html_e( 'Show excerpt', 'next-recent-posts-widget' ) ?></label>
+			</p>
+			<p style="text-decoration: line-through">
+				<input disabled id="{{ data.element_id_base }}_show_featured_image" class="widefat" type="checkbox" name="show_featured_image">
 				<label for="{{ data.element_id_base }}_show_featured_image"><?php esc_html_e( 'Show featured image', 'next-recent-posts-widget' ) ?></label>
 			</p>
 		</script>
@@ -394,6 +404,9 @@ class Widget extends \WP_JS_Widget {
 						<# } #>
 						<# if ( data.show_author && _.isObject( post.author ) ) { #>
 							{{ post.author.attributes.name }}
+						<# } #>
+						<# if ( data.show_excerpt ) { #>
+							{{{ post.excerpt.rendered }}}
 						<# } #>
 					</li>
 				<# } ); #>
