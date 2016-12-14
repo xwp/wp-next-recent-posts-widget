@@ -43,14 +43,6 @@ class Plugin extends Plugin_Base {
 		add_action( 'wp_default_styles', array( $this, 'register_styles' ), 11 );
 		add_action( 'widgets_init', array( $this, 'register_widget' ) );
 		add_action( 'wp_footer', array( $this, 'render_templates' ) );
-		add_filter( 'customize_render_partials_response', array( $this, 'amend_partials_response_with_rest_resources' ), 10, 3 );
-
-		// @todo There should be some more sophisticated logic for determining whether fallback_refresh is done.
-		add_filter( 'customize_posts_partial_schema', function( $schema ) {
-			$schema['post_title']['fallback_refresh'] = false;
-			$schema['post_excerpt']['fallback_refresh'] = false;
-			return $schema;
-		} );
 	}
 
 	/**
@@ -117,92 +109,5 @@ class Plugin extends Plugin_Base {
 		if ( in_array( $this->widget, $wp_widget_factory->widgets, true ) ) {
 			$this->widget->render_template();
 		}
-	}
-
-	/**
-	 * Add the REST resources for the customized posts to the partial rendering response.
-	 *
-	 * @param array $response {
-	 *     Response.
-	 *
-	 *     @type array $contents Associative array mapping a partial ID its corresponding array of contents
-	 *                           for the containers requested.
-	 *     @type array $errors   List of errors triggered during rendering of partials, if `WP_DEBUG_DISPLAY`
-	 *                           is enabled.
-	 * }
-	 * @param \WP_Customize_Selective_Refresh $selective_refresh Selective refresh component.
-	 * @param array                           $partials Placements' context data for the partials rendered in the request.
-	 *                                                  The array is keyed by partial ID, with each item being an array of
-	 *                                                  the placements' context data.
-	 * @return array Response.
-	 */
-	public function amend_partials_response_with_rest_resources( $response, $selective_refresh, $partials ) {
-
-		// Abort if Customize Posts isn't even active.
-		if ( ! class_exists( 'WP_Customize_Post_Setting' ) ) {
-			return $response;
-		}
-
-		// Abort if the partial render request isn't for a post field partial.
-		$requesting_post_field_partial = false;
-		foreach ( array_keys( $partials ) as $partial_id ) {
-			if ( $selective_refresh->get_partial( $partial_id ) instanceof \WP_Customize_Post_Field_Partial ) {
-				$requesting_post_field_partial = true;
-				break;
-			}
-		}
-		if ( ! $requesting_post_field_partial ) {
-			return $response;
-		}
-
-		// Gather the customized posts by type.
-		$posts_by_type = array();
-		foreach ( $selective_refresh->manager->settings() as $setting ) {
-			if ( $setting instanceof \WP_Customize_Post_Setting ) {
-				if ( ! isset( $posts_by_type[ $setting->post_type ] ) ) {
-					$posts_by_type[ $setting->post_type ] = array();
-				}
-				$posts_by_type[ $setting->post_type ][] = get_post( $setting->post_id );
-			}
-		}
-
-		// Short-circuit if there are no customized posts.
-		if ( count( $posts_by_type ) === 0 ) {
-			return $response;
-		}
-
-		// Amend partial render response with the rest resources for the given customized posts.
-		$response['rest_post_resources'] = array();
-		$wp_rest_server = rest_get_server();
-		foreach ( $posts_by_type as $type => $posts ) {
-			$post_type_object = get_post_type_object( $type );
-			if ( ! $post_type_object || empty( $post_type_object->rest_base ) ) {
-				continue;
-			}
-
-			$request = new \WP_REST_Request( 'GET', '/wp/v2/' . $post_type_object->rest_base );
-			$request->set_query_params( array(
-				'per_page' => 100,
-				'include' => wp_list_pluck( $posts, 'ID' ),
-			) );
-			if ( current_user_can( $post_type_object->cap->edit_posts ) ) {
-				$request->set_query_params( array(
-					'context' => 'edit',
-				) );
-			}
-
-			$rest_response = $wp_rest_server->dispatch( $request );
-			if ( ! $rest_response->is_error() ) {
-
-				/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
-				$rest_response = apply_filters( 'rest_post_dispatch', rest_ensure_response( $rest_response ), $wp_rest_server, $request );
-
-				foreach ( $wp_rest_server->response_to_data( $rest_response, true ) as $post_data ) {
-					$response['rest_post_resources'][ $post_data['id'] ] = $post_data;
-				}
-			}
-		}
-
-		return $response;
 	}
 }

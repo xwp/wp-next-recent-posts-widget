@@ -101,10 +101,6 @@ var nextRecentPostsWidget = (function( $ ) {
 			)
 		});
 
-		if ( component.isCustomizePreview ) {
-			component.previewPostModel();
-		}
-
 		component.PostsCollection = wp.api.collections.Posts.extend({
 
 			// @todo This can be removed as of WP 4.7.1; see WP Core Trac #39070.
@@ -227,68 +223,6 @@ var nextRecentPostsWidget = (function( $ ) {
 				} );
 			}
 		});
-	};
-
-	/**
-	 * Hook up post model in Backbone with post setting in customizer.
-	 *
-	 * @returns {void}
-	 */
-	component.previewPostModel = function previewPostModel() {
-		var originalInitialize = wp.api.models.Post.prototype.initialize, postModels = {}, synced = false;
-
-		wp.customize.bind( 'active', function() {
-			synced = true;
-		} );
-
-		// Inject into Post model creation to capture instances to sync with customize settings.
-		wp.api.models.Post.prototype.initialize = function( attributes, options ) {
-			var model = this, settingId;
-			postModels[ model.id ] = model;
-
-			originalInitialize.call( model, attributes, options );
-
-			settingId = 'post[' + model.get( 'type' ) + '][' + String( model.id ) + ']';
-			wp.customize( settingId, function( postSetting ) {
-				var updateModel = function( postData ) {
-					var attributes = {};
-					_.each( [ 'title', 'content', 'excerpt' ], function( field ) {
-						if ( ! model.get( field ).raw || model.get( field ).raw !== postData[ 'post_' + field ] ) {
-							attributes[ field ] = {
-								raw: postData[ 'post_' + field ],
-								rendered: postData[ 'post_' + field ] // Raw value used temporarily until new value fetched from server in selective refresh request.
-							};
-
-							// Apply rudimentary wpautop while waiting for selective refresh.
-							if ( attributes[ field ].rendered && ( 'excerpt' === field || 'content' === field ) ) {
-								attributes[ field ].rendered = '<p>' + attributes[ field ].rendered.split( /\n\n+/ ).join( '</p><p>' ) + '</p>';
-							}
-						}
-					} );
-					_.each( [ 'author', 'slug' ], function( field ) {
-						attributes[ field ] = postData[ 'post_' + field ];
-					} );
-					attributes.date = postData.post_date.replace( ' ', 'T' );
-					model.set( attributes );
-				};
-				if ( synced ) {
-					updateModel( postSetting.get() );
-				}
-				postSetting.bind( updateModel );
-			} );
-		};
-
-		// Supply rendered data from server in the selective refresh response.
-		wp.customize.selectiveRefresh.bind( 'render-partials-response', function( data ) {
-			if ( ! data.rest_post_resources ) {
-				return;
-			}
-			_.each( data.rest_post_resources, function( postResource, postId ) {
-				if ( postModels[ postId ] ) {
-					postModels[ postId ].set( postResource );
-				}
-			} );
-		} );
 	};
 
 	return component;
