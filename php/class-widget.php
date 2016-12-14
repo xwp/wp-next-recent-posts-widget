@@ -53,7 +53,7 @@ class Widget extends \WP_JS_Widget {
 	public function enqueue_frontend_scripts() {
 		$handle = 'next-recent-posts-widget-view';
 
-		$is_customize_preview = is_customize_preview();
+		$is_customize_preview = is_customize_preview() && current_user_can( 'customize' );
 		if ( $is_customize_preview ) {
 			wp_scripts()->registered[ $handle ]->deps[] = 'customize-preview-widgets';
 		}
