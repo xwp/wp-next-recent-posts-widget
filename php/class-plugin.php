@@ -93,7 +93,7 @@ class Plugin extends Plugin_Base {
 	public function register_styles( \WP_Styles $wp_styles ) {
 		$handle = 'next-recent-posts-widget-view';
 		$src = $this->dir_url . '/css/widget-view.css';
-		$deps = array();
+		$deps = array( 'dashicons' );
 		$wp_styles->add( $handle, $src, $deps, $this->version );
 	}
 

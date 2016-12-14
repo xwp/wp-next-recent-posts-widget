@@ -7,7 +7,8 @@ var nextRecentPostsWidget = (function( $ ) {
 	var component = {
 		widgets: {},
 		idBase: '',
-		postsPerPage: 5,
+		posts: [],
+		perPage: 5,
 		containerSelector: '',
 		renderTemplateId: '',
 		defaultInstanceData: {},
@@ -77,7 +78,7 @@ var nextRecentPostsWidget = (function( $ ) {
 		containers.each( function() {
 			var widgetContainer, widget, widgetId;
 			widgetContainer = $( this );
-			widgetId = widgetContainer.data( 'embedded' ).args.widget_id;
+			widgetId = widgetContainer.data( 'args' ).widget_id;
 			if ( ! component.widgets[ widgetId ] ) {
 				widget = new component.WidgetView( { el: widgetContainer.get() } );
 				component.widgets[ widgetId ] = widget;
@@ -149,12 +150,11 @@ var nextRecentPostsWidget = (function( $ ) {
 			// @todo Try http://stackoverflow.com/a/20419831
 
 			initialize: function() {
-				var view = this, data, watchAuthorChanges;
+				var view = this, watchAuthorChanges;
 
-				data = $( view.el ).data( 'embedded' ) || {};
-				view.model = new component.WidgetModel( data.instance );
-				view.args = data.args;
-				view.collection = new component.PostsCollection( data.posts, { parse: true } );
+				view.model = new component.WidgetModel( $( view.el ).data( 'instance' ) );
+				view.args = $( view.el ).data( 'args' );
+				view.collection = new component.PostsCollection( component.posts, { parse: true } );
 				view.template = wp.template( component.renderTemplateId );
 				view.userPromises = {};
 
@@ -191,26 +191,8 @@ var nextRecentPostsWidget = (function( $ ) {
 					} );
 				} );
 
-				if ( ! data.posts ) {
-					view.collection.fetch();
-				}
-
 				view.render();
 				view.render = _.debounce( view.render );
-			},
-
-			events: {
-				'click .load-more': 'loadMore'
-			},
-
-			loadMore: function() {
-				var view = this;
-
-				// Restore focus on the load-more button. (This wouldn't be necessary in React.)
-				view.once( 'rendered', function() {
-					view.$el.find( '.load-more' ).focus();
-				} );
-				view.model.set( 'number', view.model.get( 'number' ) + component.postsPerPage );
 			},
 
 			/**

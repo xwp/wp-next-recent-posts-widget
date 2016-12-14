@@ -58,16 +58,39 @@ class Widget extends \WP_JS_Widget {
 			wp_scripts()->registered[ $handle ]->deps[] = 'customize-preview-widgets';
 		}
 
+		/*
+		 * It is particularly important to call rest_get_server() here outside of the widget/render method because when
+		 * it runs it does wp_suspend_cache_addition(), meaning that the call to rest_get_server() will be extremely slow
+		 * particularly due to the gathering of the post templates for the REST API schema.
+		 */
+		$posts = array();
+		$wp_rest_server = rest_get_server();
+		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
+		$request->set_query_params( array(
+			'per_page' => get_option( 'posts_per_page' ),
+			'context' => 'view',
+		) );
+		$response = $wp_rest_server->dispatch( $request );
+		if ( ! $response->is_error() ) {
+			/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
+			$response = apply_filters( 'rest_post_dispatch', rest_ensure_response( $response ), $wp_rest_server, $request );
+			$posts = $wp_rest_server->response_to_data( $response, true );
+		}
+
 		wp_enqueue_script( $handle );
 		$data = array(
-			'postsPerPage' => get_option( 'posts_per_page' ),
+			'posts' => $posts,
+			'perPage' => get_option( 'posts_per_page' ),
 			'idBase' => $this->id_base,
 			'containerSelector' => '.widget.' . $this->widget_options['classname'],
 			'defaultInstanceData' => $this->get_default_instance(),
 			'renderTemplateId' => 'widget-view-' . $this->id_base,
 			'isCustomizePreview' => $is_customize_preview,
+
 		);
 		wp_add_inline_script( $handle, sprintf( 'nextRecentPostsWidget.init( %s );', wp_json_encode( $data ) ) );
+
+		wp_enqueue_style( 'next-recent-posts-widget-view' );
 	}
 
 	/**
@@ -299,36 +322,9 @@ class Widget extends \WP_JS_Widget {
 		unset( $exported_args['before_widget'] );
 		unset( $exported_args['after_widget'] );
 
-		$data = array(
-			'args' => $exported_args,
-			'posts' => null,
-		);
-
-		$wp_rest_server = rest_get_server();
-		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
-		$request->set_query_params( array(
-			'per_page' => $instance['number'],
-		) );
-		if ( current_user_can( 'edit_posts' ) && is_customize_preview() ) {
-			$request->set_query_params( array(
-				'context' => 'edit',
-			) );
-		}
-
-		$response = $wp_rest_server->dispatch( $request );
-		if ( ! $response->is_error() ) {
-
-			/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
-			$response = apply_filters( 'rest_post_dispatch', rest_ensure_response( $response ), $wp_rest_server, $request );
-
-			$data['posts'] = $wp_rest_server->response_to_data( $response, true );
-		}
-
-		$data['instance'] = $instance;
-
 		$args['before_widget'] = preg_replace(
 			'/^(\s*<\w+\s+)/',
-			sprintf( '$1 data-embedded="%s"', esc_attr( wp_json_encode( $data ) ) ),
+			sprintf( '$1 data-args="%s" data-instance="%s"', esc_attr( wp_json_encode( $exported_args ) ), esc_attr( wp_json_encode( $instance ) ) ),
 			$args['before_widget'],
 			1 // Limit.
 		);
@@ -388,6 +384,7 @@ class Widget extends \WP_JS_Widget {
 	 * Render (view) template
 	 */
 	public function render_template() {
+		$post_type_obj = get_post_type_object( 'post' );
 		?>
 		<script id="tmpl-widget-view-<?php echo esc_attr( $this->id_base ) ?>" type="text/template">
 			<# if ( data.title ) { #>
@@ -398,12 +395,20 @@ class Widget extends \WP_JS_Widget {
 			<ol>
 				<# _.each( data.posts.slice( 0, data.number ), function( post ) { #>
 					<li>
-						<a href="{{ post.link }}">{{{ post.title.rendered }}}</a>
+						<h3>
+							<a class="entry-title" href="{{ post.link }}">{{{ post.title.rendered }}}</a>
+							<?php if ( current_user_can( 'edit_posts' ) && ( ! is_customize_preview() || class_exists( 'WP_Customize_Post_Setting' ) ) ) : ?>
+								<a class="post-edit-link" href="<?php echo str_replace( '%d', '{{ post.id }}', esc_url( $post_type_obj->_edit_link ) ); ?>">
+									<span class="screen-reader-text"><?php esc_html_e( 'Edit This', 'default' ) ?></span>
+								</a>
+							<?php endif; ?>
+						</h3>
+
 						<# if ( data.show_date ) { #>
-							(<time datetime="{{ post.date }}">{{ post.date.toLocaleDateString() }}</time>)
+							<?php echo sprintf( __( 'On %s' ), '<time datetime="{{ post.date }}">{{ post.date.toLocaleDateString() }}</time>' ); ?>
 						<# } #>
 						<# if ( data.show_author && _.isObject( post.author ) ) { #>
-							{{ post.author.attributes.name }}
+							<?php echo sprintf( __( 'By %s' ), '{{ post.author.get( "name" ) }}' ); ?>
 						<# } #>
 						<# if ( data.show_excerpt ) { #>
 							{{{ post.excerpt.rendered }}}
