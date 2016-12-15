@@ -45,12 +45,12 @@ wp.customize.Widgets.formConstructor.next_recent_posts = (function( api, $ ) {
 				element_id_base: elementIdBase
 			} ) );
 
-			initialInstanceData = form.setting.get();
+			initialInstanceData = form.getValue();
 			form.propertyValues = {};
 			form.elements = {};
 			form.container.find( ':input[name]' ).each( function() {
 				var input = $( this ), name = input.prop( 'name' ), propertyValue, propertyElement;
-				if ( _.isUndefined( form.config.default_instance[ name ] ) ) {
+				if ( _.isUndefined( initialInstanceData[ name ] ) ) {
 					return;
 				}
 				propertyValue = form.createSyncedPropertyValue( form.setting, name );
