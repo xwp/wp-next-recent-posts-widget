@@ -372,8 +372,8 @@ class Widget extends \WP_JS_Widget {
 				<input id="{{ data.element_id_base }}_show_excerpt" class="widefat" type="checkbox" name="show_excerpt">
 				<label for="{{ data.element_id_base }}_show_excerpt"><?php esc_html_e( 'Show excerpt', 'next-recent-posts-widget' ) ?></label>
 			</p>
-			<p style="text-decoration: line-through">
-				<input disabled id="{{ data.element_id_base }}_show_featured_image" class="widefat" type="checkbox" name="show_featured_image">
+			<p>
+				<input id="{{ data.element_id_base }}_show_featured_image" class="widefat" type="checkbox" name="show_featured_image">
 				<label for="{{ data.element_id_base }}_show_featured_image"><?php esc_html_e( 'Show featured image', 'next-recent-posts-widget' ) ?></label>
 			</p>
 		</script>
@@ -409,6 +409,9 @@ class Widget extends \WP_JS_Widget {
 						<# } #>
 						<# if ( data.show_author && _.isObject( post.author ) ) { #>
 							<?php echo sprintf( __( 'By %s' ), '{{ post.author.get( "name" ) }}' ); ?>
+						<# } #>
+						<# if ( data.show_featured_image && _.isObject( post.featured_media ) ) { #>
+							<img src="{{ post.featured_media.get( 'media_details' ).sizes.thumbnail.source_url }}">
 						<# } #>
 						<# if ( data.show_excerpt ) { #>
 							{{{ post.excerpt.rendered }}}

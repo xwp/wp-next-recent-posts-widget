@@ -153,6 +153,7 @@ var nextRecentPostsWidget = (function( $ ) {
 				view.collection = new component.PostsCollection( component.posts, { parse: true } );
 				view.template = wp.template( component.renderTemplateId );
 				view.userPromises = {};
+				view.mediaPromises = {};
 
 				watchAuthorChanges = function( post ) {
 					var author = post.get( 'author' );
@@ -196,29 +197,41 @@ var nextRecentPostsWidget = (function( $ ) {
 			 */
 			render: function() {
 				var view = this, data;
+				view.$el.addClass( 'customize-partial-refreshing' );
 				data = _.extend( {}, view.args, view.model.attributes );
 				data.posts = view.collection.map( function( model ) {
-					var authorPromise;
-					var postData = _.clone( model.attributes );
+					var userPromise, mediaPromise, postData;
+					postData = _.clone( model.attributes );
 					if ( ! ( postData.date instanceof Date ) ) {
 						postData.date = new Date( postData.date );
 					}
 					if ( model.get( 'author' ) && model.getAuthorUser ) {
-						authorPromise = view.userPromises[ model.get( 'author' ) ];
-						if ( ! authorPromise ) {
-							authorPromise = model.getAuthorUser();
-							view.userPromises[ model.get( 'author' ) ] = authorPromise;
+						userPromise = view.userPromises[ model.get( 'author' ) ];
+						if ( ! userPromise ) {
+							userPromise = model.getAuthorUser();
+							view.userPromises[ model.get( 'author' ) ] = userPromise;
 						}
-						authorPromise.done( function( user ) {
+						userPromise.done( function( user ) {
 							postData.author = user;
+						} );
+					}
+					if ( model.get( 'featured_media' ) && model.getFeaturedMedia ) {
+						mediaPromise = view.mediaPromises[ model.get( 'featured_media' ) ];
+						if ( ! mediaPromise ) {
+							mediaPromise = model.getFeaturedMedia();
+							view.mediaPromises[ model.get( 'featured_media' ) ] = mediaPromise;
+						}
+						mediaPromise.done( function( media ) {
+							postData.featured_media = media;
 						} );
 					}
 					return postData;
 				} );
 
-				$.when.apply( null, _.values( view.userPromises ) ).then( function() {
+				$.when.apply( null, _.values( view.userPromises ).concat( _.values( view.mediaPromises ) ) ).then( function() {
 					view.$el.find( '> :not(.customize-partial-edit-shortcut)' ).remove();
 					view.$el.append( $( view.template( data ) ) );
+					view.$el.removeClass( 'customize-partial-refreshing' );
 					view.trigger( 'rendered' );
 				} );
 			}
