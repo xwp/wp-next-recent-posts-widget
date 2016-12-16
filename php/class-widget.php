@@ -395,27 +395,37 @@ class Widget extends \WP_JS_Widget {
 			<ol>
 				<# _.each( data.posts.slice( 0, data.number ), function( post ) { #>
 					<li>
-						<h3>
-							<a class="entry-title" href="{{ post.link }}">{{{ post.title.rendered }}}</a>
-							<?php if ( current_user_can( 'edit_posts' ) && ( ! is_customize_preview() || class_exists( 'WP_Customize_Post_Setting' ) ) ) : ?>
-								<a class="post-edit-link" href="<?php echo str_replace( '%d', '{{ post.id }}', esc_url( $post_type_obj->_edit_link ) ); ?>">
-									<span class="screen-reader-text"><?php esc_html_e( 'Edit This', 'default' ) ?></span>
-								</a>
-							<?php endif; ?>
-						</h3>
-
-						<# if ( data.show_date ) { #>
-							<?php echo sprintf( __( 'On %s' ), '<time datetime="{{ post.date }}">{{ post.date.toLocaleDateString() }}</time>' ); ?>
-						<# } #>
-						<# if ( data.show_author && _.isObject( post.author ) ) { #>
-							<?php echo sprintf( __( 'By %s' ), '{{ post.author.get( "name" ) }}' ); ?>
-						<# } #>
-						<# if ( data.show_featured_image && _.isObject( post.featured_media ) ) { #>
-							<img src="{{ post.featured_media.get( 'media_details' ).sizes.thumbnail.source_url }}">
-						<# } #>
-						<# if ( data.show_excerpt ) { #>
-							{{{ post.excerpt.rendered }}}
-						<# } #>
+						<article itemscope itemtype="https://schema.org/BlogPosting">
+							<h3>
+								<a class="entry-title" href="{{ post.link }}">{{{ post.title.rendered }}}</a>
+								<?php if ( current_user_can( 'edit_posts' ) && ( ! is_customize_preview() || class_exists( 'WP_Customize_Post_Setting' ) ) ) : ?>
+									<a class="post-edit-link" href="<?php echo str_replace( '%d', '{{ post.id }}', esc_url( $post_type_obj->_edit_link ) ); ?>">
+										<span class="screen-reader-text"><?php esc_html_e( 'Edit This', 'default' ) ?></span>
+									</a>
+								<?php endif; ?>
+							</h3>
+							<# if ( data.show_featured_image && _.isObject( post.featured_media ) ) { #>
+								<img src="{{ post.featured_media.get( 'media_details' ).sizes.medium.source_url }}"
+									width="{{ post.featured_media.get( 'media_details' ).sizes.medium.width / 2 }}"
+									height="{{ post.featured_media.get( 'media_details' ).sizes.medium.height / 2 }}">
+							<# } #>
+							<footer>
+								<# if ( data.show_date ) { #>
+									<time itemprop="dataPublished" datetime="{{ post.date }}">{{ post.date.toLocaleDateString() }}</time>
+								<# } #>
+								<# if ( data.show_date && data.show_author && _.isObject( post.author ) ) { #>
+									|
+								<# } #>
+								<# if ( data.show_author && _.isObject( post.author ) ) { #>
+									<a itemprop="author" href="{{ post.author.get( 'link' ) }}">{{ post.author.get( 'name' ) }}</a>
+								<# } #>
+							</footer>
+							<# if ( data.show_excerpt ) { #>
+								<div class="excerpt" itemprop="description">
+									{{{ post.excerpt.rendered }}}
+								</div>
+							<# } #>
+						</article>
 					</li>
 				<# } ); #>
 			</ol>

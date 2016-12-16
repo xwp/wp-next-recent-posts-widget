@@ -1,11 +1,27 @@
 
+.widget_next_recent_posts li {
+	margin-bottom: 0.5em;
+}
 .widget_next_recent_posts h3 {
     font-size: 1em;
+	margin-bottom: 0;
 }
 .widget_next_recent_posts h3 > a.entry-title {
     font-size: 1em;
     font-weight: bold;
 }
+.widget_next_recent_posts img {
+	display: block;
+}
+.widget_next_recent_posts .excerpt {
+	font-size: smaller;
+	margin-bottom: 1em;
+}
+.widget_next_recent_posts .excerpt p {
+	margin-top: 0.5em;
+	margin-bottom: 0.5em;
+}
+
 .widget_next_recent_posts .post-edit-link {
 	text-decoration: none;
 	border-bottom: none;
