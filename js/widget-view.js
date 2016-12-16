@@ -15,12 +15,16 @@ var nextRecentPostsWidget = (function( $ ) {
 		isCustomizePreview: false
 	};
 
+	/**
+	 * Initialize.
+	 *
+	 * @param {object} [data] Component data.
+	 * @returns {void}
+	 */
 	component.init = function init( data ) {
 		if ( data ) {
 			_.extend( component, data );
 		}
-
-		// @todo Extend to disable self.WidgetPartial
 
 		if ( component.isCustomizePreview ) {
 			component.extendWidgetPartial();
@@ -31,7 +35,7 @@ var nextRecentPostsWidget = (function( $ ) {
 				component.createModels();
 				component.setUpWidgets( document.body );
 
-				// @todo The widget instance should be fetched from the server. Selective refresh can return just the rendered data, or we can override to fetch the instance from the rest api.
+				// Set up any new widgets appearing in rendered partials.
 				if ( 'undefined' !== typeof wp && 'undefined' !== typeof wp.customize && typeof 'undefined' !== wp.customize.selectiveRefresh ) {
 					wp.customize.selectiveRefresh.bind( 'partial-content-rendered', function( placement ) {
 						component.setUpWidgets( placement.container );
@@ -43,6 +47,8 @@ var nextRecentPostsWidget = (function( $ ) {
 
 	/**
 	 * Extend widget partial.
+	 *
+	 * @returns {void}
 	 */
 	component.extendWidgetPartial = function extendWidgetPartial() {
 		var WidgetPartial = wp.customize.selectiveRefresh.partialConstructor.widget;
@@ -157,7 +163,7 @@ var nextRecentPostsWidget = (function( $ ) {
 
 				watchAuthorChanges = function( post ) {
 					var author = post.get( 'author' );
-					if ( author && post.getAuthorUser ) { // @todo Why wouldn't it be defined?
+					if ( author && post.getAuthorUser ) {
 						post.getAuthorUser().done( function( user ) {
 							user.on( 'change', function() {
 								view.render();
