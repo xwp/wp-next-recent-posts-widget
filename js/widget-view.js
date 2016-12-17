@@ -176,45 +176,7 @@ var nextRecentPostsWidget = (function( $ ) {
 				view.userPromises = {};
 				view.mediaPromises = {};
 
-				watchRelatedResourceChanges = function( post ) {
-					var userPromise, userId, mediaPromise, mediaId;
-					userId = post.get( 'author' );
-					if ( userId && post.getAuthorUser ) {
-						userPromise = view.userPromises[ userId ];
-						if ( ! userPromise ) {
-							userPromise = post.getAuthorUser();
-							view.userPromises[ userId ] = userPromise;
-							userPromise.done( function( user ) {
-								user.on( 'change', function() {
-									if ( view.collection.findWhere( { author: user.id } ) ) {
-										view.render();
-									}
-								} );
-							} );
-							userPromise.fail( function() {
-								delete view.userPromises[ userId ];
-							} );
-						}
-					}
-					mediaId = post.get( 'featured_media' );
-					if ( mediaId && post.getFeaturedMedia ) {
-						mediaPromise = view.mediaPromises[ mediaId ];
-						if ( ! mediaPromise ) {
-							mediaPromise = post.getFeaturedMedia();
-							view.mediaPromises[ mediaId ] = mediaPromise;
-							mediaPromise.done( function( media ) {
-								media.on( 'change', function() {
-									if ( view.collection.findWhere( { featured_media: media.id } ) ) {
-										view.render();
-									}
-								} );
-							} );
-							mediaPromise.fail( function() {
-								delete view.mediaPromises[ mediaId ];
-							} );
-						}
-					}
-				};
+				watchRelatedResourceChanges = _.bind( view.watchRelatedResourceChanges, view );
 
 				view.collection.on( 'change', function() {
 					var collection = this;
@@ -254,6 +216,55 @@ var nextRecentPostsWidget = (function( $ ) {
 			},
 
 			/**
+			 * Watch for changes to resources related to a given post.
+			 *
+			 * @todo The contents of this can be refactored to reduce logic duplication.
+			 *
+			 * @param {wp.api.models.Post} post Post.
+			 * @return {void}
+			 */
+			watchRelatedResourceChanges: function watchRelatedResourceChanges( post ) {
+				var view = this, userPromise, userId, mediaPromise, mediaId;
+
+				userId = post.get( 'author' );
+				if ( userId && post.getAuthorUser ) {
+					userPromise = view.userPromises[ userId ];
+					if ( ! userPromise ) {
+						userPromise = post.getAuthorUser();
+						view.userPromises[ userId ] = userPromise;
+						userPromise.done( function( user ) {
+							user.on( 'change', function() {
+								if ( view.collection.findWhere( { author: user.id } ) ) {
+									view.render();
+								}
+							} );
+						} );
+						userPromise.fail( function() {
+							delete view.userPromises[ userId ];
+						} );
+					}
+				}
+				mediaId = post.get( 'featured_media' );
+				if ( mediaId && post.getFeaturedMedia ) {
+					mediaPromise = view.mediaPromises[ mediaId ];
+					if ( ! mediaPromise ) {
+						mediaPromise = post.getFeaturedMedia();
+						view.mediaPromises[ mediaId ] = mediaPromise;
+						mediaPromise.done( function( media ) {
+							media.on( 'change', function() {
+								if ( view.collection.findWhere( { featured_media: media.id } ) ) {
+									view.render();
+								}
+							} );
+						} );
+						mediaPromise.fail( function() {
+							delete view.mediaPromises[ mediaId ];
+						} );
+					}
+				}
+			},
+
+			/**
 			 * Render view.
 			 */
 			render: function() {
@@ -265,6 +276,8 @@ var nextRecentPostsWidget = (function( $ ) {
 					if ( ! ( postData.date instanceof Date ) ) {
 						postData.date = new Date( postData.date ); // @todo Timezone naïve.
 					}
+
+					// @todo The following two conditionals could be refactored to reduce duplication.
 					if ( model.get( 'author' ) ) {
 						userPromise = view.userPromises[ model.get( 'author' ) ];
 						if ( userPromise ) {
@@ -285,11 +298,6 @@ var nextRecentPostsWidget = (function( $ ) {
 				} );
 
 				promise = $.when.apply( null, _.values( view.userPromises ).concat( _.values( view.mediaPromises ) ) );
-				promise.done( function() {
-					view.$el.find( '> :not(.customize-partial-edit-shortcut)' ).remove();
-					view.$el.append( $( view.template( data ) ) );
-					view.trigger( 'rendered' );
-				} );
 
 				if ( 'pending' === promise.state() ) {
 					view.$el.addClass( 'customize-partial-refreshing' );
@@ -297,6 +305,12 @@ var nextRecentPostsWidget = (function( $ ) {
 						view.$el.removeClass( 'customize-partial-refreshing' );
 					} );
 				}
+
+				promise.done( function() {
+					view.$el.find( '> :not(.customize-partial-edit-shortcut)' ).remove();
+					view.$el.append( $( view.template( data ) ) );
+					view.trigger( 'rendered' );
+				} );
 			}
 		});
 	};
