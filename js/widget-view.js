@@ -177,34 +177,42 @@ var nextRecentPostsWidget = (function( $ ) {
 				view.mediaPromises = {};
 
 				watchRelatedResourceChanges = function( post ) {
-					var userPromise, mediaPromise;
-					if ( post.get( 'author' ) && post.getAuthorUser ) {
-						userPromise = view.userPromises[ post.get( 'author' ) ];
+					var userPromise, userId, mediaPromise, mediaId;
+					userId = post.get( 'author' );
+					if ( userId && post.getAuthorUser ) {
+						userPromise = view.userPromises[ userId ];
 						if ( ! userPromise ) {
 							userPromise = post.getAuthorUser();
-							view.userPromises[ post.get( 'author' ) ] = userPromise;
-						}
-						userPromise.done( function( user ) {
-							user.on( 'change', function() {
-								if ( view.collection.findWhere( { author: user.id } ) ) {
-									view.render();
-								}
+							view.userPromises[ userId ] = userPromise;
+							userPromise.done( function( user ) {
+								user.on( 'change', function() {
+									if ( view.collection.findWhere( { author: user.id } ) ) {
+										view.render();
+									}
+								} );
 							} );
-						} );
+							userPromise.fail( function() {
+								delete view.userPromises[ userId ];
+							} );
+						}
 					}
-					if ( post.get( 'featured_media' ) && post.getFeaturedMedia ) {
-						mediaPromise = view.mediaPromises[ post.get( 'featured_media' ) ];
+					mediaId = post.get( 'featured_media' );
+					if ( mediaId && post.getFeaturedMedia ) {
+						mediaPromise = view.mediaPromises[ mediaId ];
 						if ( ! mediaPromise ) {
 							mediaPromise = post.getFeaturedMedia();
-							view.mediaPromises[ post.get( 'featured_media' ) ] = mediaPromise;
-						}
-						mediaPromise.done( function( media ) {
-							media.on( 'change', function() {
-								if ( view.collection.findWhere( { featured_media: media.id } ) ) {
-									view.render();
-								}
+							view.mediaPromises[ mediaId ] = mediaPromise;
+							mediaPromise.done( function( media ) {
+								media.on( 'change', function() {
+									if ( view.collection.findWhere( { featured_media: media.id } ) ) {
+										view.render();
+									}
+								} );
 							} );
-						} );
+							mediaPromise.fail( function() {
+								delete view.mediaPromises[ mediaId ];
+							} );
+						}
 					}
 				};
 
@@ -216,8 +224,19 @@ var nextRecentPostsWidget = (function( $ ) {
 				view.model.on( 'change', function() {
 					view.render();
 				} );
-				view.collection.on( 'add', watchRelatedResourceChanges );
-				view.collection.each( watchRelatedResourceChanges );
+				view.collection.each( function( post ) {
+					watchRelatedResourceChanges( post );
+					post.on( 'change', function() {
+						watchRelatedResourceChanges( post );
+					} );
+				} );
+				view.collection.on( 'add', function( post ) {
+					watchRelatedResourceChanges( post );
+					post.on( 'change', watchRelatedResourceChanges );
+				} );
+				view.collection.on( 'remove', function( post ) {
+					post.off( 'change', watchRelatedResourceChanges );
+				} );
 				view.collection.on( 'sync', function() {
 					view.render();
 				} );
@@ -238,8 +257,7 @@ var nextRecentPostsWidget = (function( $ ) {
 			 * Render view.
 			 */
 			render: function() {
-				var view = this, data;
-				view.$el.addClass( 'customize-partial-refreshing' );
+				var view = this, data, promise;
 				data = _.extend( {}, view.args, view.model.attributes );
 				data.posts = view.collection.map( function( model ) {
 					var userPromise, mediaPromise, postData;
@@ -266,12 +284,19 @@ var nextRecentPostsWidget = (function( $ ) {
 					return postData;
 				} );
 
-				$.when.apply( null, _.values( view.userPromises ).concat( _.values( view.mediaPromises ) ) ).then( function() {
+				promise = $.when.apply( null, _.values( view.userPromises ).concat( _.values( view.mediaPromises ) ) );
+				promise.done( function() {
 					view.$el.find( '> :not(.customize-partial-edit-shortcut)' ).remove();
 					view.$el.append( $( view.template( data ) ) );
-					view.$el.removeClass( 'customize-partial-refreshing' );
 					view.trigger( 'rendered' );
 				} );
+
+				if ( 'pending' === promise.state() ) {
+					view.$el.addClass( 'customize-partial-refreshing' );
+					promise.always( function() {
+						view.$el.removeClass( 'customize-partial-refreshing' );
+					} );
+				}
 			}
 		});
 	};
