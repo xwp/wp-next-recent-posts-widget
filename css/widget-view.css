@@ -33,3 +33,6 @@
 	content: "\f464";
 	cursor: pointer;
 }
+.widget_next_recent_posts.customize-partial-refreshing {
+	opacity: 0.75;
+}
