@@ -61,8 +61,15 @@ var nextRecentPostsWidget = (function( $ ) {
 				}
 
 				// @todo Still need to fetch the rendered data from the server, but we don't need to use the normal renderContent.
+				// @todo We need to override the render_callback for these widgets specifically.
 				settingValue = _.clone( wp.customize( partial.params.settings[0] ).get() );
-				component.widgets[ partial.widgetId ].model.set( settingValue );
+
+				// @todo The mapping of the instance data into the REST item representation is not DRY here.
+				settingValue.title = {
+					raw: settingValue.title,
+					rendered: settingValue.title // Actual rendered value will come with the selective refresh request.
+				};
+				component.widgets[ partial.widgetId ].model.set( settingValue ); // This is optional.
 
 				return $.Deferred().resolve().promise();
 			};
@@ -82,12 +89,16 @@ var nextRecentPostsWidget = (function( $ ) {
 			containers = containers.add( component.containerSelector );
 		}
 		containers.each( function() {
-			var widgetContainer, widget, widgetId;
+			var widgetContainer, widget, args;
 			widgetContainer = $( this );
-			widgetId = widgetContainer.data( 'args' ).widget_id;
-			if ( ! component.widgets[ widgetId ] ) {
-				widget = new component.WidgetView( { el: widgetContainer.get() } );
-				component.widgets[ widgetId ] = widget;
+			args = widgetContainer.data( 'args' );
+			if ( ! component.widgets[ args.widget_id ] ) {
+				widget = new component.WidgetView( {
+					el: widgetContainer.get(),
+					args: args,
+					item: widgetContainer.data( 'item' )
+				} );
+				component.widgets[ args.widget_id ] = widget;
 			}
 		} );
 		return containers;
@@ -151,22 +162,47 @@ var nextRecentPostsWidget = (function( $ ) {
 
 			// @todo Try http://stackoverflow.com/a/20419831
 
-			initialize: function() {
-				var view = this, watchAuthorChanges;
+			initialize: function( options ) {
+				var view = this, watchRelatedResourceChanges, item, posts;
 
-				view.model = new component.WidgetModel( $( view.el ).data( 'instance' ) );
-				view.args = $( view.el ).data( 'args' );
-				view.collection = new component.PostsCollection( component.posts, { parse: true } );
+				view.args = options.args;
+				item = _.clone( options.item );
+				posts = item._embedded['wp:post'] || [];
+				delete item._links;
+				delete item._embedded;
+				view.model = new component.WidgetModel( item );
+				view.collection = new component.PostsCollection( posts, { parse: true } );
 				view.template = wp.template( component.renderTemplateId );
 				view.userPromises = {};
 				view.mediaPromises = {};
 
-				watchAuthorChanges = function( post ) {
-					var author = post.get( 'author' );
-					if ( author && post.getAuthorUser ) {
-						post.getAuthorUser().done( function( user ) {
+				watchRelatedResourceChanges = function( post ) {
+					var userPromise, mediaPromise;
+					if ( post.get( 'author' ) && post.getAuthorUser ) {
+						userPromise = view.userPromises[ post.get( 'author' ) ];
+						if ( ! userPromise ) {
+							userPromise = post.getAuthorUser();
+							view.userPromises[ post.get( 'author' ) ] = userPromise;
+						}
+						userPromise.done( function( user ) {
 							user.on( 'change', function() {
-								view.render();
+								if ( view.collection.findWhere( { author: user.id } ) ) {
+									view.render();
+								}
+							} );
+						} );
+					}
+					if ( post.get( 'featured_media' ) && post.getFeaturedMedia ) {
+						mediaPromise = view.mediaPromises[ post.get( 'featured_media' ) ];
+						if ( ! mediaPromise ) {
+							mediaPromise = post.getFeaturedMedia();
+							view.mediaPromises[ post.get( 'featured_media' ) ] = mediaPromise;
+						}
+						mediaPromise.done( function( media ) {
+							media.on( 'change', function() {
+								if ( view.collection.findWhere( { featured_media: media.id } ) ) {
+									view.render();
+								}
 							} );
 						} );
 					}
@@ -180,8 +216,8 @@ var nextRecentPostsWidget = (function( $ ) {
 				view.model.on( 'change', function() {
 					view.render();
 				} );
-				view.collection.on( 'add', watchAuthorChanges );
-				view.collection.each( watchAuthorChanges );
+				view.collection.on( 'add', watchRelatedResourceChanges );
+				view.collection.each( watchRelatedResourceChanges );
 				view.collection.on( 'sync', function() {
 					view.render();
 				} );
@@ -209,27 +245,23 @@ var nextRecentPostsWidget = (function( $ ) {
 					var userPromise, mediaPromise, postData;
 					postData = _.clone( model.attributes );
 					if ( ! ( postData.date instanceof Date ) ) {
-						postData.date = new Date( postData.date );
+						postData.date = new Date( postData.date ); // @todo Timezone naïve.
 					}
-					if ( model.get( 'author' ) && model.getAuthorUser ) {
+					if ( model.get( 'author' ) ) {
 						userPromise = view.userPromises[ model.get( 'author' ) ];
-						if ( ! userPromise ) {
-							userPromise = model.getAuthorUser();
-							view.userPromises[ model.get( 'author' ) ] = userPromise;
+						if ( userPromise ) {
+							userPromise.done( function( user ) {
+								postData.author = user;
+							} );
 						}
-						userPromise.done( function( user ) {
-							postData.author = user;
-						} );
 					}
-					if ( model.get( 'featured_media' ) && model.getFeaturedMedia ) {
+					if ( model.get( 'featured_media' ) ) {
 						mediaPromise = view.mediaPromises[ model.get( 'featured_media' ) ];
-						if ( ! mediaPromise ) {
-							mediaPromise = model.getFeaturedMedia();
-							view.mediaPromises[ model.get( 'featured_media' ) ] = mediaPromise;
+						if ( mediaPromise ) {
+							mediaPromise.done( function( media ) {
+								postData.featured_media = media;
+							} );
 						}
-						mediaPromise.done( function( media ) {
-							postData.featured_media = media;
-						} );
 					}
 					return postData;
 				} );

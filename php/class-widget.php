@@ -5,8 +5,6 @@
  * @package NextRecentPostsWidget
  */
 
-// @todo Re-fetch posts from REST API to re-populate Backbone models when setting in Customize Posts changes.
-
 namespace NextRecentPostsWidget;
 
 /**
@@ -39,6 +37,32 @@ class Widget extends \WP_JS_Widget {
 		}
 		parent::__construct();
 	}
+
+	/**
+	 * Get REST server.
+	 *
+	 * This is a workaround to ensure that a REST server can be performantly instantiated
+	 * during a widget's rendering callback. The reason for the slowness is that object-
+	 * cache addition is suspended during a widget's rendering in the customizer to
+	 * help prevent a widget from possibly polluting a persistent object cache with
+	 * previewed data. Instantiating a new REST server is extremely slow without object
+	 * cache particularly due to the gathering of the post templates for the REST API schema.
+	 *
+	 * @return \WP_REST_Server REST Server.
+	 */
+	public function get_rest_server() {
+		$suspended = null;
+		if ( $this->is_preview() ) {
+			$suspended = wp_suspend_cache_addition();
+			wp_suspend_cache_addition( false );
+		}
+		$server = rest_get_server();
+		if ( $this->is_preview() ) {
+			wp_suspend_cache_addition( $suspended );
+		}
+		return $server;
+	}
+
 	/**
 	 * Enqueue scripts needed for the controls.
 	 */
@@ -58,28 +82,8 @@ class Widget extends \WP_JS_Widget {
 			wp_scripts()->registered[ $handle ]->deps[] = 'customize-preview-widgets';
 		}
 
-		/*
-		 * It is particularly important to call rest_get_server() here outside of the widget/render method because when
-		 * it runs it does wp_suspend_cache_addition(), meaning that the call to rest_get_server() will be extremely slow
-		 * particularly due to the gathering of the post templates for the REST API schema.
-		 */
-		$posts = array();
-		$wp_rest_server = rest_get_server();
-		$request = new \WP_REST_Request( 'GET', '/wp/v2/posts' );
-		$request->set_query_params( array(
-			'per_page' => get_option( 'posts_per_page' ),
-			'context' => 'view',
-		) );
-		$response = $wp_rest_server->dispatch( $request );
-		if ( ! $response->is_error() ) {
-			/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
-			$response = apply_filters( 'rest_post_dispatch', rest_ensure_response( $response ), $wp_rest_server, $request );
-			$posts = $wp_rest_server->response_to_data( $response, true );
-		}
-
 		wp_enqueue_script( $handle );
 		$data = array(
-			'posts' => $posts,
 			'perPage' => get_option( 'posts_per_page' ),
 			'idBase' => $this->id_base,
 			'containerSelector' => '.widget.' . $this->widget_options['classname'],
@@ -205,16 +209,23 @@ class Widget extends \WP_JS_Widget {
 		/** This filter is documented in src/wp-includes/widgets/class-wp-widget-pages.php */
 		$title_rendered = apply_filters( 'widget_title', $title_rendered, $instance, $this->id_base );
 
-		$item = array(
-			'title' => array(
-				'raw' => $instance['title'],
-				'rendered' => $title_rendered,
-			),
-			'posts' => $instance['posts'],
-			'show_date' => $instance['show_date'],
-			'show_featured_image' => $instance['show_featured_image'],
-			'show_author' => $instance['show_author'],
-			'show_excerpt' => $instance['show_excerpt'],
+		/** This filter is documented in wp-includes/widgets/class-wp-widget-recent-posts.php */
+		$query = new \WP_Query( apply_filters( 'widget_posts_args', array(
+			'posts_per_page'      => $instance['number'],
+			'no_found_rows'       => true,
+			'post_status'         => 'publish',
+			'ignore_sticky_posts' => true,
+		) ) );
+
+		$item = array_merge(
+			$instance,
+			array(
+				'title' => array(
+					'raw' => $instance['title'],
+					'rendered' => $title_rendered,
+				),
+				'posts' => wp_list_pluck( $query->posts, 'ID' ),
+			)
 		);
 
 		return $item;
@@ -313,10 +324,38 @@ class Widget extends \WP_JS_Widget {
 	 * @return void
 	 */
 	public function render( $args, $instance ) {
-		$instance = array_merge( $this->get_default_instance(), $instance );
 
-		/** This filter is documented in wp-includes/widgets/class-wp-widget-pages.php */
-		$instance['title'] = apply_filters( 'widget_title', $instance['title'], $instance, $this->id_base );
+		/*
+		 * Must be called first so that the rest_api_init action will have been done
+		 * so that $this->rest_controller will be set.
+		 */
+		$wp_rest_server = $this->get_rest_server();
+
+		$route = '/' . $this->rest_controller->get_namespace() . '/widgets/' . $this->rest_controller->get_rest_base() . '/' . $this->number;
+		$request = new \WP_REST_Request( 'GET', $route );
+		$request->set_query_params( array(
+			'context' => 'view',
+		) );
+		$response = $this->rest_controller->prepare_item_for_response( $instance, $request, $this->number );
+
+		/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
+		$response = apply_filters( 'rest_post_dispatch', $response, $wp_rest_server, $request );
+
+		// Embed the posts 2-levels deep.
+		$embedded_posts = array();
+		foreach ( $response->data['posts'] as $post_id ) {
+			$post_request = new \WP_REST_Request( 'GET', "/wp/v2/posts/$post_id" );
+			$post_request->set_query_params( array(
+				'context' => 'view',
+			) );
+			$post_response = $wp_rest_server->dispatch( $post_request );
+			if ( ! $post_response->is_error() ) {
+				$post_response = $wp_rest_server->envelope_response( $post_response, true );
+				$embedded_posts[] = $post_response->data['body'];
+			}
+		}
+		$response->data['_embedded']['wp:post'] = $embedded_posts;
+		$item = $response->data;
 
 		$exported_args = $args;
 		unset( $exported_args['before_widget'] );
@@ -324,7 +363,7 @@ class Widget extends \WP_JS_Widget {
 
 		$args['before_widget'] = preg_replace(
 			'/^(\s*<\w+\s+)/',
-			sprintf( '$1 data-args="%s" data-instance="%s"', esc_attr( wp_json_encode( $exported_args ) ), esc_attr( wp_json_encode( $instance ) ) ),
+			sprintf( '$1 data-args="%s" data-item="%s"', esc_attr( wp_json_encode( $exported_args ) ), esc_attr( wp_json_encode( $item ) ) ),
 			$args['before_widget'],
 			1 // Limit.
 		);
@@ -384,12 +423,15 @@ class Widget extends \WP_JS_Widget {
 	 * Render (view) template
 	 */
 	public function render_template() {
-		$post_type_obj = get_post_type_object( 'post' );
+		$edit_link_template = admin_url( '/' ) . 'post.php?post=%d&action=edit';
 		?>
 		<script id="tmpl-widget-view-<?php echo esc_attr( $this->id_base ) ?>" type="text/template">
+			<#
+			var editPostLinkTpl = <?php echo wp_json_encode( $edit_link_template ); ?>;
+			#>
 			<# if ( data.title ) { #>
 				{{{ data.before_title }}}
-					{{ data.title }}
+					{{ data.title.rendered }}
 				{{{ data.after_title }}}
 			<# } #>
 			<ol>
@@ -399,7 +441,7 @@ class Widget extends \WP_JS_Widget {
 							<h3>
 								<a class="entry-title" href="{{ post.link }}">{{{ post.title.rendered }}}</a>
 								<?php if ( current_user_can( 'edit_posts' ) && ( ! is_customize_preview() || class_exists( 'WP_Customize_Post_Setting' ) ) ) : ?>
-									<a class="post-edit-link" href="<?php echo str_replace( '%d', '{{ post.id }}', esc_url( $post_type_obj->_edit_link ) ); ?>">
+									<a class="post-edit-link" href="{{ editPostLinkTpl.replace( '%d', post.id ) }}">
 										<span class="screen-reader-text"><?php esc_html_e( 'Edit This', 'default' ) ?></span>
 									</a>
 								<?php endif; ?>
@@ -407,7 +449,8 @@ class Widget extends \WP_JS_Widget {
 							<# if ( data.show_featured_image && _.isObject( post.featured_media ) ) { #>
 								<img src="{{ post.featured_media.get( 'media_details' ).sizes.medium.source_url }}"
 									width="{{ post.featured_media.get( 'media_details' ).sizes.medium.width / 2 }}"
-									height="{{ post.featured_media.get( 'media_details' ).sizes.medium.height / 2 }}">
+									height="{{ post.featured_media.get( 'media_details' ).sizes.medium.height / 2 }}"
+									alt="{{ post.featured_media.get( 'title' ).rendered }}">
 							<# } #>
 							<footer>
 								<# if ( data.show_date ) { #>
