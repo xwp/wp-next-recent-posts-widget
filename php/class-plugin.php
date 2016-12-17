@@ -43,6 +43,8 @@ class Plugin extends Plugin_Base {
 		add_action( 'wp_default_styles', array( $this, 'register_styles' ), 11 );
 		add_action( 'widgets_init', array( $this, 'register_widget' ) );
 		add_action( 'wp_footer', array( $this, 'render_templates' ) );
+		$priority = 20; // \WP_Customize_Widgets::customize_dynamic_partial_args() happens at priority 10.
+		add_filter( 'customize_dynamic_partial_args', array( $this, 'filter_customize_dynamic_partial_args' ), $priority, 2 );
 	}
 
 	/**
@@ -109,5 +111,36 @@ class Plugin extends Plugin_Base {
 		if ( in_array( $this->widget, $wp_widget_factory->widgets, true ) ) {
 			$this->widget->render_template();
 		}
+	}
+
+	/**
+	 * Override the partial render_callback for widgets of this type.
+	 *
+	 * @global \WP_Customize_Manager $wp_customize Manager.
+	 * @param false|array $partial_args The arguments to the WP_Customize_Partial constructor.
+	 * @return array Partial args.
+	 */
+	public function filter_customize_dynamic_partial_args( $partial_args ) {
+		global $wp_customize;
+		if ( empty( $wp_customize ) ) {
+			_doing_it_wrong( __FUNCTION__, esc_html__( 'Expected customizer to be instantiated.', 'next-recent-posts-widget' ), null );
+			return $partial_args;
+		}
+		if ( empty( $wp_customize->widgets ) ) {
+			return $partial_args; // The widgets component is not loaded.
+		}
+		if ( array( $wp_customize->widgets, 'render_widget_partial' ) !== $partial_args['render_callback'] ) {
+			return $partial_args; // Partial is not for a widget.
+		}
+
+		$parsed_widget_id = $wp_customize->widgets->parse_widget_setting_id( current( $partial_args['settings'] ) );
+		if ( is_wp_error( $parsed_widget_id ) ) {
+			return $partial_args;
+		}
+		if ( $parsed_widget_id['id_base'] === $this->widget->id_base ) {
+			$partial_args['render_callback'] = array( $this->widget, 'render_partial' );
+		}
+
+		return $partial_args;
 	}
 }

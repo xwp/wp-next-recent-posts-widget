@@ -54,26 +54,40 @@ var nextRecentPostsWidget = (function( $ ) {
 		var WidgetPartial = wp.customize.selectiveRefresh.partialConstructor.widget;
 
 		WidgetPartial.prototype.refresh = (function( originalRefresh ) {
-			return function() {
+			return function refresh() {
 				var partial = this, settingValue;
-				if ( component.idBase !== partial.widgetIdParts.idBase || ! component.widgets[ partial.widgetId ] ) {
-					return originalRefresh.call( partial );
+
+				// Apply the raw JS-edited instance to the model for immediate low-fidelity previewing without PHP filters applied.
+				if ( component.idBase === partial.widgetIdParts.idBase && component.widgets[ partial.widgetId ] ) {
+					settingValue = _.clone( wp.customize( partial.params.settings[0] ).get() );
+
+					// Attempt to transform bare properties into {raw,rendered} objects.
+					_.each( component.widgets[ partial.widgetId ].model.attributes, function( value, key ) {
+						if ( ! _.isUndefined( settingValue[ key ] ) && _.isObject( value ) && ! _.isUndefined( value.rendered ) ) {
+							settingValue[ key ] = {
+								raw: settingValue[ key ],
+								rendered: settingValue[ key ] // Actual rendered value will come with the selective refresh request.
+							};
+						}
+					} );
+					component.widgets[ partial.widgetId ].model.set( settingValue );
 				}
-
-				// @todo Still need to fetch the rendered data from the server, but we don't need to use the normal renderContent.
-				// @todo We need to override the render_callback for these widgets specifically.
-				settingValue = _.clone( wp.customize( partial.params.settings[0] ).get() );
-
-				// @todo The mapping of the instance data into the REST item representation is not DRY here.
-				settingValue.title = {
-					raw: settingValue.title,
-					rendered: settingValue.title // Actual rendered value will come with the selective refresh request.
-				};
-				component.widgets[ partial.widgetId ].model.set( settingValue ); // This is optional.
-
-				return $.Deferred().resolve().promise();
+				return originalRefresh.call( partial );
 			};
 		})( WidgetPartial.prototype.refresh );
+
+		WidgetPartial.prototype.renderContent = (function( originalRenderContent ) {
+			return function renderContent( placement ) {
+				var partial = this;
+				if ( component.idBase === partial.widgetIdParts.idBase && component.widgets[ partial.widgetId ] ) {
+					component.widgets[ partial.widgetId ].model.set( placement.addedContent );
+					placement.container.removeClass( 'customize-partial-refreshing' );
+					return true;
+				} else {
+					return originalRenderContent.call( partial );
+				}
+			};
+		})( WidgetPartial.prototype.renderContent );
 	};
 
 	/**
@@ -160,8 +174,14 @@ var nextRecentPostsWidget = (function( $ ) {
 
 		component.WidgetView = Backbone.View.extend({
 
-			// @todo Try http://stackoverflow.com/a/20419831
-
+			/**
+			 * Initialize.
+			 *
+			 * @param {object} options Options.
+			 * @param {object} options.item Widget item.
+			 * @param {object} options.args Widget args.
+			 * @returns {void}
+			 */
 			initialize: function( options ) {
 				var view = this, watchRelatedResourceChanges, item, posts;
 
@@ -221,7 +241,7 @@ var nextRecentPostsWidget = (function( $ ) {
 			 * @todo The contents of this can be refactored to reduce logic duplication.
 			 *
 			 * @param {wp.api.models.Post} post Post.
-			 * @return {void}
+			 * @returns {void}
 			 */
 			watchRelatedResourceChanges: function watchRelatedResourceChanges( post ) {
 				var view = this, userPromise, userId, mediaPromise, mediaId;
@@ -266,6 +286,8 @@ var nextRecentPostsWidget = (function( $ ) {
 
 			/**
 			 * Render view.
+			 *
+			 * @returns {void}
 			 */
 			render: function() {
 				var view = this, data, promise;

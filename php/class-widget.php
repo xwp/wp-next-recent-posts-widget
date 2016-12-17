@@ -208,6 +208,7 @@ class Widget extends \WP_JS_Widget {
 		$title_rendered = $instance['title'] ? $instance['title'] : $schema['title']['properties']['rendered']['default'];
 		/** This filter is documented in src/wp-includes/widgets/class-wp-widget-pages.php */
 		$title_rendered = apply_filters( 'widget_title', $title_rendered, $instance, $this->id_base );
+		$title_rendered = html_entity_decode( $title_rendered, ENT_QUOTES, get_bloginfo( 'charset' ) );
 
 		/** This filter is documented in wp-includes/widgets/class-wp-widget-recent-posts.php */
 		$query = new \WP_Query( apply_filters( 'widget_posts_args', array(
@@ -314,16 +315,17 @@ class Widget extends \WP_JS_Widget {
 	}
 
 	/**
-	 * Widget instance.
+	 * Get the REST resource item for the widget.
 	 *
-	 * @access public
+	 * @param array $instance Instance data.
+	 * @param int   $number   Widget number.
 	 *
-	 * @param array $args     Display arguments including 'before_title', 'after_title',
-	 *                        'before_widget', and 'after_widget'.
-	 * @param array $instance The settings for the particular instance of the widget.
-	 * @return void
+	 * @return array Item.
 	 */
-	public function render( $args, $instance ) {
+	public function get_rest_item( $instance, $number = null ) {
+		if ( empty( $number ) ) {
+			$number = $this->number;
+		}
 
 		/*
 		 * Must be called first so that the rest_api_init action will have been done
@@ -331,12 +333,12 @@ class Widget extends \WP_JS_Widget {
 		 */
 		$wp_rest_server = $this->get_rest_server();
 
-		$route = '/' . $this->rest_controller->get_namespace() . '/widgets/' . $this->rest_controller->get_rest_base() . '/' . $this->number;
+		$route = '/' . $this->rest_controller->get_namespace() . '/widgets/' . $this->rest_controller->get_rest_base() . '/' . $number;
 		$request = new \WP_REST_Request( 'GET', $route );
 		$request->set_query_params( array(
 			'context' => 'view',
 		) );
-		$response = $this->rest_controller->prepare_item_for_response( $instance, $request, $this->number );
+		$response = $this->rest_controller->prepare_item_for_response( $instance, $request, $number );
 
 		/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
 		$response = apply_filters( 'rest_post_dispatch', $response, $wp_rest_server, $request );
@@ -356,6 +358,22 @@ class Widget extends \WP_JS_Widget {
 		}
 		$response->data['_embedded']['wp:post'] = $embedded_posts;
 		$item = $response->data;
+		return $item;
+
+	}
+
+	/**
+	 * Widget instance.
+	 *
+	 * @access public
+	 *
+	 * @param array $args     Display arguments including 'before_title', 'after_title',
+	 *                        'before_widget', and 'after_widget'.
+	 * @param array $instance The settings for the particular instance of the widget.
+	 * @return void
+	 */
+	public function render( $args, $instance ) {
+		$item = $this->get_rest_item( $instance, $this->number );
 
 		$exported_args = $args;
 		unset( $exported_args['before_widget'] );
@@ -474,5 +492,24 @@ class Widget extends \WP_JS_Widget {
 			</ol>
 		</script>
 		<?php
+	}
+
+	/**
+	 * Renders a specific widget using the supplied sidebar arguments.
+	 *
+	 * @param \WP_Customize_Partial $partial Partial.
+	 * @return array|false REST widget item or false on error`.
+	 */
+	public function render_partial( $partial ) {
+		$id_data   = $partial->id_data();
+		$widget_id = array_shift( $id_data['keys'] );
+		$parsed_widget_id = $partial->component->manager->widgets->parse_widget_id( $widget_id );
+		if ( is_wp_error( $parsed_widget_id ) ) {
+			return false;
+		}
+
+		$instance = $partial->component->manager->get_setting( $partial->primary_setting )->value();
+		$item = $this->get_rest_item( $instance, $parsed_widget_id['number'] );
+		return $item;
 	}
 }
