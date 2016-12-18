@@ -209,6 +209,7 @@ class Widget extends \WP_JS_Widget {
 		/** This filter is documented in src/wp-includes/widgets/class-wp-widget-pages.php */
 		$title_rendered = apply_filters( 'widget_title', $title_rendered, $instance, $this->id_base );
 		$title_rendered = html_entity_decode( $title_rendered, ENT_QUOTES, get_bloginfo( 'charset' ) );
+		$title_rendered = convert_smilies( $title_rendered );
 
 		/** This filter is documented in wp-includes/widgets/class-wp-widget-recent-posts.php */
 		$query = new \WP_Query( apply_filters( 'widget_posts_args', array(

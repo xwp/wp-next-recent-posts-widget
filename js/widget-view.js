@@ -329,8 +329,9 @@ var nextRecentPostsWidget = (function( $ ) {
 				}
 
 				promise.done( function() {
+					var rendered = $( view.template( data ) );
 					view.$el.find( '> :not(.customize-partial-edit-shortcut)' ).remove();
-					view.$el.append( $( view.template( data ) ) );
+					view.$el.append( rendered );
 					view.trigger( 'rendered' );
 				} );
 			}
