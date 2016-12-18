@@ -448,7 +448,7 @@ class Widget extends \WP_JS_Widget {
 			<#
 			var editPostLinkTpl = <?php echo wp_json_encode( $edit_link_template ); ?>;
 			#>
-			<# if ( data.title ) { #>
+			<# if ( data.title.rendered ) { #>
 				{{{ data.before_title }}}
 					{{ data.title.rendered }}
 				{{{ data.after_title }}}
@@ -482,7 +482,7 @@ class Widget extends \WP_JS_Widget {
 									<a itemprop="author" href="{{ post.author.get( 'link' ) }}">{{ post.author.get( 'name' ) }}</a>
 								<# } #>
 							</footer>
-							<# if ( data.show_excerpt ) { #>
+							<# if ( data.show_excerpt && post.excerpt.rendered ) { #>
 								<div class="excerpt" itemprop="description">
 									{{{ post.excerpt.rendered }}}
 								</div>
