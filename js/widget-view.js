@@ -78,8 +78,27 @@ var nextRecentPostsWidget = (function( $ ) {
 
 		WidgetPartial.prototype.renderContent = (function( originalRenderContent ) {
 			return function renderContent( placement ) {
-				var partial = this;
-				if ( component.idBase === partial.widgetIdParts.idBase && component.widgets[ partial.widgetId ] ) {
+				var partial = this, args;
+				if ( component.idBase === partial.widgetIdParts.idBase ) {
+					if ( ! component.widgets[ partial.widgetId ] ) {
+
+						args = _.find( wp.customize.widgetsPreview.registeredSidebars, function( currentSidebar ) {
+							return wp.customize.has( 'sidebars_widgets[' + currentSidebar.id + ']' ) && -1 === _.indexOf( wp.customize( 'sidebars_widgets[' + currentSidebar.id + ']' ).get() );
+						} );
+
+						if ( args ) {
+							args = _.clone( args );
+							args.widget_id = partial.widgetId;
+							args.before_widget = args.before_widget.replace( /%1\$s/g, partial.widgetId ).replace( /%2\$s/g, 'widget_' + partial.widgetIdParts.idBase );
+							placement.container.addClass( $( args.before_widget ).attr( 'class' ) ); // @todo Core should be doing this.
+						}
+
+						component.widgets[ partial.widgetId ] = new component.WidgetView( {
+							el: placement.container,
+							args: args || {},
+							item: placement.addedContent
+						} );
+					}
 					component.widgets[ partial.widgetId ].model.set( placement.addedContent );
 					placement.container.removeClass( 'customize-partial-refreshing' );
 					return true;
