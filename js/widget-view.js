@@ -84,7 +84,7 @@ var nextRecentPostsWidget = (function( $ ) {
 					placement.container.removeClass( 'customize-partial-refreshing' );
 					return true;
 				} else {
-					return originalRenderContent.call( partial );
+					return originalRenderContent.call( partial, placement );
 				}
 			};
 		})( WidgetPartial.prototype.renderContent );

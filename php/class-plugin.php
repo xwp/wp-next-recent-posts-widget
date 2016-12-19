@@ -129,7 +129,7 @@ class Plugin extends Plugin_Base {
 		if ( empty( $wp_customize->widgets ) ) {
 			return $partial_args; // The widgets component is not loaded.
 		}
-		if ( array( $wp_customize->widgets, 'render_widget_partial' ) !== $partial_args['render_callback'] ) {
+		if ( ! isset( $partial_args['render_callback'] ) || array( $wp_customize->widgets, 'render_widget_partial' ) !== $partial_args['render_callback'] ) {
 			return $partial_args; // Partial is not for a widget.
 		}
 
