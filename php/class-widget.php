@@ -15,23 +15,26 @@ namespace NextRecentPostsWidget;
 class Widget extends \WP_JS_Widget {
 
 	/**
-	 * Version of widget.
-	 *
-	 * @var string
-	 */
-	public $version = '0.1';
-
-	/**
 	 * ID Base.
 	 *
 	 * @var string
 	 */
-	public $id_base = 'next_recent_posts';
+	public $id_base = 'next-recent-posts';
+
+	/**
+	 * Plugin instance.
+	 *
+	 * @var Plugin
+	 */
+	public $plugin;
 
 	/**
 	 * Widget constructor.
+	 *
+	 * @param Plugin $plugin Plugin instance.
 	 */
-	public function __construct() {
+	public function __construct( Plugin $plugin ) {
+		$this->plugin = $plugin;
 		if ( ! isset( $this->name ) ) {
 			$this->name = __( 'Next Recent Posts', 'next-recent-posts-widget' );
 		}

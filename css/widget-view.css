@@ -1,38 +1,38 @@
 
-.widget_next_recent_posts li {
+.widget_next-recent-posts li {
 	margin-bottom: 0.5em;
 }
-.widget_next_recent_posts h3 {
+.widget_next-recent-posts h3 {
     font-size: 1em;
 	margin-bottom: 0;
 }
-.widget_next_recent_posts h3 > a.entry-title {
+.widget_next-recent-posts h3 > a.entry-title {
     font-size: 1em;
     font-weight: bold;
 }
-.widget_next_recent_posts img {
+.widget_next-recent-posts img {
 	display: block;
 }
-.widget_next_recent_posts .excerpt {
+.widget_next-recent-posts .excerpt {
 	font-size: smaller;
 	margin-bottom: 1em;
 }
-.widget_next_recent_posts .excerpt p {
+.widget_next-recent-posts .excerpt p {
 	margin-top: 0.5em;
 	margin-bottom: 0.5em;
 }
 
-.widget_next_recent_posts .post-edit-link {
+.widget_next-recent-posts .post-edit-link {
 	text-decoration: none;
 	border-bottom: none;
 	-webkit-box-shadow: none !important;
 	box-shadow: none  !important;
 }
-.widget_next_recent_posts .post-edit-link::before {
+.widget_next-recent-posts .post-edit-link::before {
 	font-family: Dashicons;
 	content: "\f464";
 	cursor: pointer;
 }
-.widget_next_recent_posts.customize-partial-refreshing {
+.widget_next-recent-posts.customize-partial-refreshing {
 	opacity: 0.75;
 }

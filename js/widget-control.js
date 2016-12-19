@@ -4,7 +4,7 @@
 /* eslint-disable strict */
 /* eslint-disable complexity */
 
-wp.customize.Widgets.formConstructor.next_recent_posts = (function( api, $ ) {
+wp.customize.Widgets.formConstructor['next-recent-posts'] = (function( api, $ ) {
 	'use strict';
 
 	var NextRecentPostsForm;
@@ -40,7 +40,7 @@ wp.customize.Widgets.formConstructor.next_recent_posts = (function( api, $ ) {
 		embed: function() {
 			var form = this, elementIdBase = 'el' + String( Math.random() ), initialInstanceData;
 
-			form.template = wp.template( 'customize-widget-next_recent_posts' );
+			form.template = wp.template( 'customize-widget-next-recent-posts' );
 			form.container.html( form.template( {
 				element_id_base: elementIdBase
 			} ) );
