@@ -355,6 +355,10 @@ class Widget extends \WP_JS_Widget {
 				'context' => 'view',
 			) );
 			$post_response = $wp_rest_server->dispatch( $post_request );
+
+			/** This filter is documented in wp-includes/rest-api/class-wp-rest-server.php */
+			$post_response = apply_filters( 'rest_post_dispatch', $post_response, $wp_rest_server, $post_request );
+
 			if ( ! $post_response->is_error() ) {
 				$post_response = $wp_rest_server->envelope_response( $post_response, true );
 				$embedded_posts[] = $post_response->data['body'];
