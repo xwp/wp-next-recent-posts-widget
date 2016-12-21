@@ -31,7 +31,11 @@ var nextRecentPostsWidget = (function( $ ) {
 		}
 
 		$( function() {
-			wp.api.loadPromise.done( function() {
+			var apiPromises = [
+				wp.api.loadPromise,
+				wp.api.init( { versionString: 'js-widgets/v1' } )
+			];
+			$.when( apiPromises ).done( function() {
 				component.createModels();
 				component.setUpWidgets( document.body );
 
@@ -144,12 +148,12 @@ var nextRecentPostsWidget = (function( $ ) {
 	 */
 	component.createModels = function createModels() {
 
-		component.WidgetModel = Backbone.Model.extend({
-			defaults: _.extend(
-				{},
-				component.defaultInstanceData
-			)
-		});
+		component.WidgetModel = _.find( wp.api.models, function ( model ) {
+			return model.prototype.route && '/js-widgets/v1/widgets/next-recent-posts/(?P<widget_number>\\d+)' === model.prototype.route.index;
+		} );
+		if ( ! component.WidgetModel ) {
+			throw new Error( 'Could not find WidgetModel' );
+		}
 
 		component.PostsCollection = wp.api.collections.Posts.extend({
 
