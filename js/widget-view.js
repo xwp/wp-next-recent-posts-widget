@@ -211,8 +211,6 @@ var nextRecentPostsWidget = (function( $ ) {
 				view.args = options.args;
 				item = _.clone( options.item );
 				posts = item._embedded['wp:post'] || [];
-				delete item._links;
-				delete item._embedded;
 				view.model = new component.WidgetModel( item );
 				view.collection = new component.PostsCollection( posts, { parse: true } );
 				view.template = wp.template( component.renderTemplateId );

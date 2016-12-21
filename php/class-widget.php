@@ -340,7 +340,7 @@ class Widget extends \WP_JS_Widget {
 		$route = '/' . $this->rest_controller->get_namespace() . '/widgets/' . $this->rest_controller->get_rest_base() . '/' . $number;
 		$request = new \WP_REST_Request( 'GET', $route );
 		$request->set_query_params( array(
-			'context' => 'view',
+			'context' => current_user_can( 'edit_theme_options' ) ? 'edit' : 'view',
 		) );
 		$response = $this->rest_controller->prepare_item_for_response( $instance, $request, $number );
 
@@ -352,7 +352,7 @@ class Widget extends \WP_JS_Widget {
 		foreach ( $response->data['posts'] as $post_id ) {
 			$post_request = new \WP_REST_Request( 'GET', "/wp/v2/posts/$post_id" );
 			$post_request->set_query_params( array(
-				'context' => 'view',
+				'context' => current_user_can( 'edit_post', $post_id ) ? 'edit' : 'view',
 			) );
 			$post_response = $wp_rest_server->dispatch( $post_request );
 
@@ -364,6 +364,8 @@ class Widget extends \WP_JS_Widget {
 				$embedded_posts[] = $post_response->data['body'];
 			}
 		}
+
+		$response->data['_links'] = $wp_rest_server->get_compact_response_links( $response );
 		$response->data['_embedded']['wp:post'] = $embedded_posts;
 		$item = $response->data;
 		return $item;
