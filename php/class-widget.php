@@ -203,16 +203,10 @@ class Widget extends \WP_JS_Widget {
 	 * @return array Widget item.
 	 */
 	public function prepare_item_for_response( $instance, $request ) {
-		unset( $request );
+		$instance = parent::prepare_item_for_response( $instance, $request );
 
-		$schema = $this->get_item_schema();
-		$instance = array_merge( $this->get_default_instance(), $instance );
-
-		$title_rendered = $instance['title'] ? $instance['title'] : $schema['title']['properties']['rendered']['default'];
-		/** This filter is documented in src/wp-includes/widgets/class-wp-widget-pages.php */
-		$title_rendered = apply_filters( 'widget_title', $title_rendered, $instance, $this->id_base );
-		$title_rendered = html_entity_decode( $title_rendered, ENT_QUOTES, get_bloginfo( 'charset' ) );
-		$title_rendered = convert_smilies( $title_rendered );
+		$item = array_merge( $this->get_default_instance(), $instance );
+		$item['title']['rendered'] = convert_smilies( $item['title']['rendered'] );
 
 		/** This filter is documented in wp-includes/widgets/class-wp-widget-recent-posts.php */
 		$query = new \WP_Query( apply_filters( 'widget_posts_args', array(
@@ -223,12 +217,8 @@ class Widget extends \WP_JS_Widget {
 		) ) );
 
 		$item = array_merge(
-			$instance,
+			$item,
 			array(
-				'title' => array(
-					'raw' => $instance['title'],
-					'rendered' => $title_rendered,
-				),
 				'posts' => wp_list_pluck( $query->posts, 'ID' ),
 			)
 		);
@@ -272,34 +262,6 @@ class Widget extends \WP_JS_Widget {
 	}
 
 	/**
-	 * Validate a title request argument based on details registered to the route.
-	 *
-	 * @param  mixed            $value   Value.
-	 * @param  \WP_REST_Request $request Request.
-	 * @param  string           $param   Param.
-	 * @return \WP_Error|boolean
-	 */
-	public function validate_title_field( $value, $request, $param ) {
-		$valid = rest_validate_request_arg( $value, $request, $param );
-		if ( is_wp_error( $valid ) ) {
-			return $valid;
-		}
-
-		if ( $this->should_validate_strictly( $request ) ) {
-			if ( preg_match( '#</?\w+.*?>#', $value ) ) {
-				return new \WP_Error( 'rest_invalid_param', sprintf( __( '%s cannot contain markup', 'next-recent-posts-widget' ), $param ) );
-			}
-			if ( trim( $value ) !== $value ) {
-				return new \WP_Error( 'rest_invalid_param', sprintf( __( '%s contains whitespace padding', 'next-recent-posts-widget' ), $param ) );
-			}
-			if ( preg_match( '/%[a-f0-9]{2}/i', $value ) ) {
-				return new \WP_Error( 'rest_invalid_param', sprintf( __( '%s contains illegal characters (octets)', 'next-recent-posts-widget' ), $param ) );
-			}
-		}
-		return true;
-	}
-
-	/**
 	 * Sanitize instance data.
 	 *
 	 * @inheritdoc
@@ -309,11 +271,9 @@ class Widget extends \WP_JS_Widget {
 	 * @return array|null|\WP_Error Array instance if sanitization (and validation) passed. Returns `WP_Error` or `null` on failure.
 	 */
 	public function sanitize( $new_instance, $old_instance ) {
-		unset( $old_instance );
-		$instance = array_merge( $this->get_default_instance(), $new_instance );
-		$instance['title'] = sanitize_text_field( $instance['title'] );
+		$instance = parent::sanitize( $new_instance, $old_instance );
 		foreach ( array( 'show_date', 'show_featured_image', 'show_author', 'show_excerpt' ) as $field ) {
-			$instance[ $field ] = boolval( $instance[ $field ] );
+			$instance[ $field ] = (bool) $instance[ $field ];
 		}
 		return $instance;
 	}
@@ -417,32 +377,43 @@ class Widget extends \WP_JS_Widget {
 	 * Render JS Template.
 	 */
 	public function form_template() {
+		$item_schema = $this->get_item_schema();
 		?>
-		<script id="tmpl-customize-widget-<?php echo esc_attr( $this->id_base ) ?>" type="text/template">
-			<p>
-				<label for="{{ data.element_id_base }}_title"><?php esc_html_e( 'Title:', 'next-recent-posts-widget' ) ?></label>
-				<input id="{{ data.element_id_base }}_title" class="widefat" type="text" name="title">
-			</p>
-			<p>
-				<label for="{{ data.element_id_base }}_number"><?php esc_html_e( 'Number', 'next-recent-posts-widget' ) ?></label>
-				<input id="{{ data.element_id_base }}_number" name="number" type="number" min="1" max="<?php echo esc_attr( get_option( 'posts_per_page' ) ) ?>" size="3">
-			</p>
-			<p>
-				<input id="{{ data.element_id_base }}_show_date" class="widefat" type="checkbox" name="show_date">
-				<label for="{{ data.element_id_base }}_show_date"><?php esc_html_e( 'Show date', 'next-recent-posts-widget' ) ?></label>
-			</p>
-			<p>
-				<input id="{{ data.element_id_base }}_show_author" class="widefat" type="checkbox" name="show_author">
-				<label for="{{ data.element_id_base }}_show_author"><?php esc_html_e( 'Show author', 'next-recent-posts-widget' ) ?></label>
-			</p>
-			<p>
-				<input id="{{ data.element_id_base }}_show_excerpt" class="widefat" type="checkbox" name="show_excerpt">
-				<label for="{{ data.element_id_base }}_show_excerpt"><?php esc_html_e( 'Show excerpt', 'next-recent-posts-widget' ) ?></label>
-			</p>
-			<p>
-				<input id="{{ data.element_id_base }}_show_featured_image" class="widefat" type="checkbox" name="show_featured_image">
-				<label for="{{ data.element_id_base }}_show_featured_image"><?php esc_html_e( 'Show featured image', 'next-recent-posts-widget' ) ?></label>
-			</p>
+		<script id="tmpl-customize-widget-form-<?php echo esc_attr( $this->id_base ) ?>" type="text/template">
+			<?php
+			$this->render_title_form_field_template( array(
+				'placeholder' => $item_schema['title']['properties']['raw']['default'],
+			) );
+			$this->render_form_field_template( array(
+				'name' => 'number',
+				'label' => __( 'Number of posts to show:', 'default' ),
+				'type' => 'number',
+				'min' => 1,
+				'max' => get_option( 'posts_per_page' ),
+				'step' => 1,
+				'size' => 3,
+			) );
+			$this->render_form_field_template( array(
+				'name' => 'show_date',
+				'label' => __( 'Show date', 'next-recent-posts-widget' ),
+				'type' => 'checkbox',
+			) );
+			$this->render_form_field_template( array(
+				'name' => 'show_author',
+				'label' => __( 'Show author', 'next-recent-posts-widget' ),
+				'type' => 'checkbox',
+			) );
+			$this->render_form_field_template( array(
+				'name' => 'show_excerpt',
+				'label' => __( 'Show excerpt', 'next-recent-posts-widget' ),
+				'type' => 'checkbox',
+			) );
+			$this->render_form_field_template( array(
+				'name' => 'show_featured_image',
+				'label' => __( 'Show featured image', 'next-recent-posts-widget' ),
+				'type' => 'checkbox',
+			) );
+			?>
 		</script>
 		<?php
 	}
