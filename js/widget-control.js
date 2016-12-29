@@ -16,7 +16,7 @@ wp.customize.Widgets.formConstructor['next-recent-posts'] = (function( api ) {
 	 *
 	 * @constructor
 	 */
-	NextRecentPostsForm = api.Widgets.CoreForm.extend( {} );
+	NextRecentPostsForm = api.Widgets.Form.extend( {} );
 
 	if ( 'undefined' !== typeof module ) {
 		module.exports = NextRecentPostsForm;
