@@ -25,9 +25,7 @@ class Plugin extends Plugin_Base {
 	public function __construct() {
 		$this->plugin_file = dirname( __DIR__ ) . '/next-recent-posts-widget.php';
 		parent::__construct();
-
-		$priority = 9; // Because WP_Customize_Widgets::register_settings() happens at after_setup_theme priority 10.
-		add_action( 'after_setup_theme', array( $this, 'init' ), $priority );
+		add_action( 'after_setup_theme', array( $this, 'init' ) );
 	}
 
 	/**
@@ -36,28 +34,28 @@ class Plugin extends Plugin_Base {
 	 * @action after_setup_theme
 	 */
 	public function init() {
-		if ( ! defined( 'REST_API_VERSION' ) || ! class_exists( 'WP_REST_Posts_Controller' ) || ! apply_filters( 'rest_enabled', true ) ) {
-			add_action( 'admin_notices', array( $this, 'show_missing_rest_api_admin_notice' ) );
+		if ( ! defined( 'REST_API_VERSION' ) || ! class_exists( 'WP_REST_Posts_Controller' ) || ! apply_filters( 'rest_enabled', true ) || ! class_exists( 'WP_JS_Widget' ) ) {
+			add_action( 'admin_notices', array( $this, 'show_missing_dependencies_notice' ) );
 			return;
 		}
-
-		$this->config = apply_filters( 'next_recent_posts_widget_plugin_config', $this->config, $this );
 
 		add_action( 'wp_default_scripts', array( $this, 'register_scripts' ), 11 );
 		add_action( 'wp_default_styles', array( $this, 'register_styles' ), 11 );
 		add_action( 'widgets_init', array( $this, 'register_widget' ) );
-		add_action( 'widgets_init', array( $this, 'export_widget_types' ), 90 );
+		add_action( 'wp_footer', array( $this, 'render_templates' ) );
+		$priority = 20; // \WP_Customize_Widgets::customize_dynamic_partial_args() happens at priority 10.
+		add_filter( 'customize_dynamic_partial_args', array( $this, 'filter_customize_dynamic_partial_args' ), $priority, 2 );
 	}
 
 	/**
-	 * Show error when REST API is not available.
+	 * Show error when REST API and JS Widgets plugins are not available.
 	 *
 	 * @action admin_notices
 	 */
-	public function show_missing_rest_api_admin_notice() {
+	public function show_missing_dependencies_notice() {
 		?>
 		<div class="error">
-			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the WordPress REST API to be available and enabled, including WordPress 4.7 or the REST API plugin.', 'next-recent-posts-widget' ); ?></p>
+			<p><?php esc_html_e( 'The Next Recent Posts Widget plugin requires the JS Widgets plugin to be active as well as it requires the WordPress REST API to be available and enabled, including WordPress 4.7 or the REST API plugin.', 'next-recent-posts-widget' ); ?></p>
 		</div>
 		<?php
 	}
@@ -74,14 +72,10 @@ class Plugin extends Plugin_Base {
 		$deps = array( 'backbone', 'wp-api', 'wp-util' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
 
-		$exports = array(
-			'postsPerPage' => (int) get_option( 'posts_per_page' ),
-		);
-		$wp_scripts->add_data(
-			$handle,
-			'data',
-			sprintf( 'var _nextRecentPostsWidgetExports = %s;', wp_json_encode( $exports ) )
-		);
+		$handle = 'next-recent-posts-widget-control';
+		$src = $this->dir_url . '/js/widget-control.js';
+		$deps = array( 'customize-js-widgets' );
+		$wp_scripts->add( $handle, $src, $deps, $this->version );
 	}
 
 	/**
@@ -93,7 +87,7 @@ class Plugin extends Plugin_Base {
 	public function register_styles( \WP_Styles $wp_styles ) {
 		$handle = 'next-recent-posts-widget-view';
 		$src = $this->dir_url . '/css/widget-view.css';
-		$deps = array();
+		$deps = array( 'dashicons' );
 		$wp_styles->add( $handle, $src, $deps, $this->version );
 	}
 
@@ -103,60 +97,50 @@ class Plugin extends Plugin_Base {
 	 * @action widgets_init, 10
 	 */
 	public function register_widget() {
+		$this->widget = new Widget( $this );
+		register_widget( $this->widget );
+	}
+
+	/**
+	 * Render templates.
+	 *
+	 * @global \WP_Widget_Factory $wp_widget_factory
+	 */
+	public function render_templates() {
 		global $wp_widget_factory;
-		$class_name = __NAMESPACE__ . '\\Widget';
-		register_widget( $class_name );
-		$this->widget = $wp_widget_factory->widgets[ $class_name ];
-		$this->widget->plugin = $this;
-
-		/*
-		 * Note: Once register_widget() allows pre-instantiated widgets to be
-		 * passed into register_widget(), this can be simplified to:
-		 *
-		 *   $this->widget = new Widget();
-		 *   $this->widget->plugin = $this;
-		 *   register_widget( $this->widget );
-		 *
-		 * See https://core.trac.wordpress.org/ticket/28216
-		 */
-	}
-
-	/**
-	 * Export the container selector and default instance data for the widget.
-	 *
-	 * @action widgets_init, 90
-	 */
-	public function export_widget_types() {
-		$container_selector = '.' . $this->widget->widget_options['classname'];
-
-		$handle = 'next-recent-posts-widget-view';
-		$wp_scripts = wp_scripts();
-		$data = $wp_scripts->get_data( $handle, 'data' );
-		$data .= sprintf( '_nextRecentPostsWidgetExports.containerSelector = %s;', wp_json_encode( $container_selector ) );
-		$data .= sprintf( '_nextRecentPostsWidgetExports.defaultInstanceData = %s;', wp_json_encode( $this->widget->get_default_instance() ) );
-		$wp_scripts->add_data( $handle, 'data', $data );
-	}
-
-	/**
-	 * Get instance of WP_REST_Server.
-	 *
-	 * @return \WP_REST_Server
-	 */
-	public function get_rest_server() {
-		/**
-		 * REST Server.
-		 *
-		 * @var \WP_REST_Server $wp_rest_server
-		 */
-		global $wp_rest_server;
-		if ( empty( $wp_rest_server ) ) {
-			/** This filter is documented in wp-includes/rest-api.php */
-			$wp_rest_server_class = apply_filters( 'wp_rest_server_class', 'WP_REST_Server' );
-			$wp_rest_server = new $wp_rest_server_class();
-
-			/** This filter is documented in wp-includes/rest-api.php */
-			do_action( 'rest_api_init', $wp_rest_server );
+		if ( in_array( $this->widget, $wp_widget_factory->widgets, true ) ) {
+			$this->widget->render_template();
 		}
-		return $wp_rest_server;
+	}
+
+	/**
+	 * Override the partial render_callback for widgets of this type.
+	 *
+	 * @global \WP_Customize_Manager $wp_customize Manager.
+	 * @param false|array $partial_args The arguments to the WP_Customize_Partial constructor.
+	 * @return array Partial args.
+	 */
+	public function filter_customize_dynamic_partial_args( $partial_args ) {
+		global $wp_customize;
+		if ( empty( $wp_customize ) ) {
+			_doing_it_wrong( __FUNCTION__, esc_html__( 'Expected customizer to be instantiated.', 'next-recent-posts-widget' ), null );
+			return $partial_args;
+		}
+		if ( empty( $wp_customize->widgets ) ) {
+			return $partial_args; // The widgets component is not loaded.
+		}
+		if ( ! isset( $partial_args['render_callback'] ) || array( $wp_customize->widgets, 'render_widget_partial' ) !== $partial_args['render_callback'] ) {
+			return $partial_args; // Partial is not for a widget.
+		}
+
+		$parsed_widget_id = $wp_customize->widgets->parse_widget_setting_id( current( $partial_args['settings'] ) );
+		if ( is_wp_error( $parsed_widget_id ) ) {
+			return $partial_args;
+		}
+		if ( $parsed_widget_id['id_base'] === $this->widget->id_base ) {
+			$partial_args['render_callback'] = array( $this->widget, 'render_partial' );
+		}
+
+		return $partial_args;
 	}
 }
