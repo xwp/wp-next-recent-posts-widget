@@ -106,87 +106,53 @@ class Widget extends \WP_JS_Widget {
 	 * @return array Schema.
 	 */
 	public function get_item_schema() {
-		$schema = array(
-			'title' => array(
-				'description' => __( 'The title for the widget.', 'next-recent-posts-widget' ),
-				'type' => 'object',
-				'context' => array( 'view', 'edit', 'embed' ),
-				'properties' => array(
-					'raw' => array(
-						'description' => __( 'Title for the widget, as it exists in the database.', 'next-recent-posts-widget' ),
-						'type' => 'string',
-						'context' => array( 'edit' ),
-						'default' => '',
-						'arg_options' => array(
-							'validate_callback' => array( $this, 'validate_title_field' ),
-						),
-					),
-					'rendered' => array(
-						'description' => __( 'HTML title for the widget, transformed for display.', 'next-recent-posts-widget' ),
-						'type' => 'string',
-						'context' => array( 'view', 'edit', 'embed' ),
-						'default' => __( 'Recent Posts', 'next-recent-posts-widget' ),
-						'readonly' => true,
-					),
-				),
-			),
-			'number' => array(
-				'description' => __( 'The number of posts to display.', 'js-widgets' ),
-				'type' => 'integer',
-				'context' => array( 'view', 'edit', 'embed' ),
-				'default' => 5,
-				'minimum' => 1,
-				'arg_options' => array(
-					'validate_callback' => 'rest_validate_request_arg',
-				),
-			),
-			'show_date' => array(
-				'description' => __( 'Whether the date should be shown.', 'next-recent-posts-widget' ),
-				'type' => 'boolean',
-				'default' => false,
-				'context' => array( 'view', 'edit', 'embed' ),
-				'arg_options' => array(
-					'validate_callback' => 'rest_validate_request_arg',
-				),
-			),
-			'show_author' => array(
-				'description' => __( 'Whether the author is shown.', 'next-recent-posts-widget' ),
-				'type' => 'boolean',
-				'default' => false,
-				'context' => array( 'view', 'edit', 'embed' ),
-				'arg_options' => array(
-					'validate_callback' => 'rest_validate_request_arg',
-				),
-			),
-			'show_excerpt' => array(
-				'description' => __( 'Whether the excerpt is shown.', 'next-recent-posts-widget' ),
-				'type' => 'boolean',
-				'default' => false,
-				'context' => array( 'view', 'edit', 'embed' ),
-				'arg_options' => array(
-					'validate_callback' => 'rest_validate_request_arg',
-				),
-			),
-			'show_featured_image' => array(
-				'description' => __( 'Whether the featured image is shown.', 'next-recent-posts-widget' ),
-				'type' => 'boolean',
-				'default' => false,
-				'context' => array( 'view', 'edit', 'embed' ),
-				'arg_options' => array(
-					'validate_callback' => 'rest_validate_request_arg',
-				),
-			),
-			'posts' => array(
-				'description' => __( 'The IDs for the collected posts.', 'next-recent-posts-widget' ),
-				'type' => 'array',
-				'items' => array(
+		$schema = array_merge(
+			parent::get_item_schema(),
+			array(
+				'number' => array(
+					'description' => __( 'The number of posts to display.', 'js-widgets' ),
 					'type' => 'integer',
+					'context' => array( 'view', 'edit', 'embed' ),
+					'default' => 5,
+					'minimum' => 1,
 				),
-				'context' => array( 'view', 'edit', 'embed' ),
-				'default' => array(),
-				'readonly' => true,
-			),
+				'show_date' => array(
+					'description' => __( 'Whether the date should be shown.', 'next-recent-posts-widget' ),
+					'type' => 'boolean',
+					'default' => false,
+					'context' => array( 'view', 'edit', 'embed' ),
+				),
+				'show_author' => array(
+					'description' => __( 'Whether the author is shown.', 'next-recent-posts-widget' ),
+					'type' => 'boolean',
+					'default' => false,
+					'context' => array( 'view', 'edit', 'embed' ),
+				),
+				'show_excerpt' => array(
+					'description' => __( 'Whether the excerpt is shown.', 'next-recent-posts-widget' ),
+					'type' => 'boolean',
+					'default' => false,
+					'context' => array( 'view', 'edit', 'embed' ),
+				),
+				'show_featured_image' => array(
+					'description' => __( 'Whether the featured image is shown.', 'next-recent-posts-widget' ),
+					'type' => 'boolean',
+					'default' => false,
+					'context' => array( 'view', 'edit', 'embed' ),
+				),
+				'posts' => array(
+					'description' => __( 'The IDs for the collected posts.', 'next-recent-posts-widget' ),
+					'type' => 'array',
+					'items' => array(
+						'type' => 'integer',
+					),
+					'context' => array( 'view', 'edit', 'embed' ),
+					'default' => array(),
+					'readonly' => true,
+				),
+			)
 		);
+		$schema['title']['properties']['raw']['default'] = __( 'Recent Posts', 'default' );
 		return $schema;
 	}
 
@@ -203,9 +169,7 @@ class Widget extends \WP_JS_Widget {
 	 * @return array Widget item.
 	 */
 	public function prepare_item_for_response( $instance, $request ) {
-		$instance = parent::prepare_item_for_response( $instance, $request );
-
-		$item = array_merge( $this->get_default_instance(), $instance );
+		$item = parent::prepare_item_for_response( $instance, $request );
 		$item['title']['rendered'] = convert_smilies( $item['title']['rendered'] );
 
 		/** This filter is documented in wp-includes/widgets/class-wp-widget-recent-posts.php */
@@ -358,19 +322,6 @@ class Widget extends \WP_JS_Widget {
 
 		echo $args['before_widget']; // WPCS: xss ok.
 		echo $args['after_widget']; // WPCS: xss ok.
-	}
-
-	/**
-	 * Get configuration data for the form.
-	 *
-	 * @return array
-	 */
-	public function get_form_args() {
-		return array(
-			'l10n' => array(
-				'title_tags_invalid' => __( 'Tags will be stripped from the title.', 'next-recent-posts-widget' ),
-			),
-		);
 	}
 
 	/**
