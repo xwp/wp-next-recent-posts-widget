@@ -155,6 +155,16 @@ var nextRecentPostsWidget = (function( $ ) {
 			throw new Error( 'Could not find WidgetModel' );
 		}
 
+		// Add patch for https://github.com/WP-API/client-js/pull/151
+		if ( -1 === component.WidgetModel.prototype.initialize.toString().indexOf( 'wp.api.WPApiBaseModel.prototype.initialize.call' ) ) {
+			component.WidgetModel.prototype.initialize = (function( previousInitialize ) {
+				return function( attributes, options ) {
+					wp.api.WPApiBaseModel.prototype.initialize.call( this, attributes, options );
+					previousInitialize.call( this, attributes, options );
+				};
+			})( component.WidgetModel.prototype.initialize );
+		}
+
 		component.PostsCollection = wp.api.collections.Posts.extend({
 
 			// @todo This can be removed as of WP 4.7.1; see WP Core Trac #39070.
