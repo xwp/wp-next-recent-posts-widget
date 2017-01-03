@@ -389,7 +389,7 @@ class Widget extends \WP_JS_Widget {
 					<li>
 						<article itemscope itemtype="https://schema.org/BlogPosting">
 							<h3>
-								<a class="entry-title" href="{{ post.link }}">{{{ post.title.rendered }}}</a>
+								<a itemprop="title" href="{{ post.link }}">{{{ post.title.rendered }}}</a>
 								<?php if ( current_user_can( 'edit_posts' ) && ( ! is_customize_preview() || class_exists( 'WP_Customize_Post_Setting' ) ) ) : ?>
 									<a class="post-edit-link" href="{{ editPostLinkTpl.replace( '%d', post.id ) }}">
 										<span class="screen-reader-text"><?php esc_html_e( 'Edit This', 'default' ) ?></span>
@@ -414,7 +414,7 @@ class Widget extends \WP_JS_Widget {
 								<# } #>
 							</footer>
 							<# if ( data.show_excerpt && post.excerpt.rendered ) { #>
-								<div class="excerpt" itemprop="description">
+								<div itemprop="description">
 									{{{ post.excerpt.rendered }}}
 								</div>
 							<# } #>
