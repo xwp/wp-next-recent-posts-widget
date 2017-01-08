@@ -3,7 +3,7 @@
  * Plugin Name: Next Recent Posts Widget
  * Plugin URI: https://github.com/xwp/wp-next-recent-posts-widget
  * Description: Next-generation Recent Posts widget which fetches posts via the WP REST API, renders then into the widget via JavaScript templates, and provides a JS-driven Customizer control. It will continue fetching the any next new posts at regular intervals.
- * Version: 0.2.0
+ * Version: 0.3.0-alpha
  * Author:  XWP
  * Author URI: https://xwp.co/
  * License: GPLv2+
