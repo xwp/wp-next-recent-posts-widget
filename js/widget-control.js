@@ -16,9 +16,7 @@ wp.widgets.formConstructor['next-recent-posts'] = (function() {
 	 *
 	 * @constructor
 	 */
-	NextRecentPostsForm = wp.widgets.Form.extend( {
-		id_base: 'next-recent-posts'
-	} );
+	NextRecentPostsForm = wp.widgets.Form.extend( {} );
 
 	if ( 'undefined' !== typeof module ) {
 		module.exports = NextRecentPostsForm;

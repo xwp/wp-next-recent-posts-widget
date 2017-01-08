@@ -328,46 +328,40 @@ class Widget extends \WP_JS_Widget {
 	/**
 	 * Render JS Template.
 	 */
-	public function form_template() {
+	public function render_form_template() {
 		$item_schema = $this->get_item_schema();
-		?>
-		<script id="tmpl-customize-widget-form-<?php echo esc_attr( $this->id_base ) ?>" type="text/template">
-			<?php
-			$this->render_title_form_field_template( array(
-				'placeholder' => $item_schema['title']['properties']['raw']['default'],
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'number',
-				'label' => __( 'Number of posts to show:', 'default' ),
-				'type' => 'number',
-				'min' => 1,
-				'max' => get_option( 'posts_per_page' ),
-				'step' => 1,
-				'size' => 3,
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_date',
-				'label' => __( 'Show date', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_author',
-				'label' => __( 'Show author', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_excerpt',
-				'label' => __( 'Show excerpt', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_featured_image',
-				'label' => __( 'Show featured image', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			?>
-		</script>
-		<?php
+		$this->render_title_form_field_template( array(
+			'placeholder' => $item_schema['title']['properties']['raw']['default'],
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'number',
+			'label' => __( 'Number of posts to show:', 'default' ),
+			'type' => 'number',
+			'min' => 1,
+			'max' => get_option( 'posts_per_page' ),
+			'step' => 1,
+			'size' => 3,
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_date',
+			'label' => __( 'Show date', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_author',
+			'label' => __( 'Show author', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_excerpt',
+			'label' => __( 'Show excerpt', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_featured_image',
+			'label' => __( 'Show featured image', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
 	}
 
 	/**
