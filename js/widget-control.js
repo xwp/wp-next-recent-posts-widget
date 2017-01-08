@@ -4,7 +4,7 @@
 /* eslint-disable strict */
 /* eslint-disable complexity */
 
-wp.customize.Widgets.formConstructor['next-recent-posts'] = (function( api ) {
+wp.widgets.formConstructor['next-recent-posts'] = (function() {
 	'use strict';
 
 	var NextRecentPostsForm;
@@ -16,11 +16,11 @@ wp.customize.Widgets.formConstructor['next-recent-posts'] = (function( api ) {
 	 *
 	 * @constructor
 	 */
-	NextRecentPostsForm = api.Widgets.Form.extend( {} );
+	NextRecentPostsForm = wp.widgets.Form.extend( {} );
 
 	if ( 'undefined' !== typeof module ) {
 		module.exports = NextRecentPostsForm;
 	}
 	return NextRecentPostsForm;
 
-})( wp.customize );
+})();

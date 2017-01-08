@@ -70,14 +70,18 @@ class Widget extends \WP_JS_Widget {
 	 * Enqueue scripts needed for the controls.
 	 */
 	public function enqueue_control_scripts() {
+		parent::enqueue_control_scripts();
+
 		$handle = 'next-recent-posts-widget-control';
 		wp_enqueue_script( $handle );
+		wp_add_inline_script( $handle, sprintf( 'wp.widgets.formConstructor[ %s ].prototype.config = %s;', wp_json_encode( $this->id_base ), wp_json_encode( $this->get_form_args() ) ) );
 	}
 
 	/**
 	 * Enqueue scripts needed for the frontend.
 	 */
 	public function enqueue_frontend_scripts() {
+		parent::enqueue_frontend_scripts();
 		$handle = 'next-recent-posts-widget-view';
 
 		$is_customize_preview = is_customize_preview() && current_user_can( 'customize' );
@@ -327,46 +331,40 @@ class Widget extends \WP_JS_Widget {
 	/**
 	 * Render JS Template.
 	 */
-	public function form_template() {
+	public function render_form_template() {
 		$item_schema = $this->get_item_schema();
-		?>
-		<script id="tmpl-customize-widget-form-<?php echo esc_attr( $this->id_base ) ?>" type="text/template">
-			<?php
-			$this->render_title_form_field_template( array(
-				'placeholder' => $item_schema['title']['properties']['raw']['default'],
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'number',
-				'label' => __( 'Number of posts to show:', 'default' ),
-				'type' => 'number',
-				'min' => 1,
-				'max' => get_option( 'posts_per_page' ),
-				'step' => 1,
-				'size' => 3,
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_date',
-				'label' => __( 'Show date', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_author',
-				'label' => __( 'Show author', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_excerpt',
-				'label' => __( 'Show excerpt', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			$this->render_form_field_template( array(
-				'name' => 'show_featured_image',
-				'label' => __( 'Show featured image', 'next-recent-posts-widget' ),
-				'type' => 'checkbox',
-			) );
-			?>
-		</script>
-		<?php
+		$this->render_title_form_field_template( array(
+			'placeholder' => $item_schema['title']['properties']['raw']['default'],
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'number',
+			'label' => __( 'Number of posts to show:', 'default' ),
+			'type' => 'number',
+			'min' => 1,
+			'max' => get_option( 'posts_per_page' ),
+			'step' => 1,
+			'size' => 3,
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_date',
+			'label' => __( 'Show date', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_author',
+			'label' => __( 'Show author', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_excerpt',
+			'label' => __( 'Show excerpt', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
+		$this->render_form_field_template( array(
+			'name' => 'show_featured_image',
+			'label' => __( 'Show featured image', 'next-recent-posts-widget' ),
+			'type' => 'checkbox',
+		) );
 	}
 
 	/**

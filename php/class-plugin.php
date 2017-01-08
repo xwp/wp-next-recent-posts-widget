@@ -74,7 +74,7 @@ class Plugin extends Plugin_Base {
 
 		$handle = 'next-recent-posts-widget-control';
 		$src = $this->dir_url . '/js/widget-control.js';
-		$deps = array( 'customize-js-widgets' );
+		$deps = array( 'js-widget-form' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
 	}
 
