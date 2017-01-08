@@ -70,6 +70,8 @@ class Widget extends \WP_JS_Widget {
 	 * Enqueue scripts needed for the controls.
 	 */
 	public function enqueue_control_scripts() {
+		parent::enqueue_control_scripts();
+
 		$handle = 'next-recent-posts-widget-control';
 		wp_enqueue_script( $handle );
 		wp_add_inline_script( $handle, sprintf( 'wp.widgets.formConstructor[ %s ].prototype.config = %s;', wp_json_encode( $this->id_base ), wp_json_encode( $this->get_form_args() ) ) );
@@ -79,6 +81,7 @@ class Widget extends \WP_JS_Widget {
 	 * Enqueue scripts needed for the frontend.
 	 */
 	public function enqueue_frontend_scripts() {
+		parent::enqueue_frontend_scripts();
 		$handle = 'next-recent-posts-widget-view';
 
 		$is_customize_preview = is_customize_preview() && current_user_can( 'customize' );
