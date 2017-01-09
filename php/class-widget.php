@@ -337,7 +337,7 @@ class Widget extends \WP_JS_Widget {
 			'placeholder' => $item_schema['title']['properties']['raw']['default'],
 		) );
 		$this->render_form_field_template( array(
-			'name' => 'number',
+			'field' => 'number',
 			'label' => __( 'Number of posts to show:', 'default' ),
 			'type' => 'number',
 			'min' => 1,
@@ -346,22 +346,22 @@ class Widget extends \WP_JS_Widget {
 			'size' => 3,
 		) );
 		$this->render_form_field_template( array(
-			'name' => 'show_date',
+			'field' => 'show_date',
 			'label' => __( 'Show date', 'next-recent-posts-widget' ),
 			'type' => 'checkbox',
 		) );
 		$this->render_form_field_template( array(
-			'name' => 'show_author',
+			'field' => 'show_author',
 			'label' => __( 'Show author', 'next-recent-posts-widget' ),
 			'type' => 'checkbox',
 		) );
 		$this->render_form_field_template( array(
-			'name' => 'show_excerpt',
+			'field' => 'show_excerpt',
 			'label' => __( 'Show excerpt', 'next-recent-posts-widget' ),
 			'type' => 'checkbox',
 		) );
 		$this->render_form_field_template( array(
-			'name' => 'show_featured_image',
+			'field' => 'show_featured_image',
 			'label' => __( 'Show featured image', 'next-recent-posts-widget' ),
 			'type' => 'checkbox',
 		) );
