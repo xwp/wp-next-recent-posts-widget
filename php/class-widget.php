@@ -119,6 +119,7 @@ class Widget extends \WP_JS_Widget {
 					'context' => array( 'view', 'edit', 'embed' ),
 					'default' => 5,
 					'minimum' => 1,
+					'maximum' => get_option( 'posts_per_page' ),
 				),
 				'show_date' => array(
 					'description' => __( 'Whether the date should be shown.', 'next-recent-posts-widget' ),
@@ -339,31 +340,23 @@ class Widget extends \WP_JS_Widget {
 		$this->render_form_field_template( array(
 			'field' => 'number',
 			'label' => __( 'Number of posts to show:', 'default' ),
-			'type' => 'number',
-			'min' => 1,
-			'max' => get_option( 'posts_per_page' ),
-			'step' => 1,
 			'size' => 3,
 		) );
 		$this->render_form_field_template( array(
 			'field' => 'show_date',
 			'label' => __( 'Show date', 'next-recent-posts-widget' ),
-			'type' => 'checkbox',
 		) );
 		$this->render_form_field_template( array(
 			'field' => 'show_author',
 			'label' => __( 'Show author', 'next-recent-posts-widget' ),
-			'type' => 'checkbox',
 		) );
 		$this->render_form_field_template( array(
 			'field' => 'show_excerpt',
 			'label' => __( 'Show excerpt', 'next-recent-posts-widget' ),
-			'type' => 'checkbox',
 		) );
 		$this->render_form_field_template( array(
 			'field' => 'show_featured_image',
 			'label' => __( 'Show featured image', 'next-recent-posts-widget' ),
-			'type' => 'checkbox',
 		) );
 	}
 
