@@ -74,7 +74,7 @@ class Widget extends \WP_JS_Widget {
 
 		$handle = 'next-recent-posts-widget-control';
 		wp_enqueue_script( $handle );
-		wp_add_inline_script( $handle, sprintf( 'wp.widgets.formConstructor[ %s ].prototype.config = %s;', wp_json_encode( $this->id_base ), wp_json_encode( $this->get_form_args() ) ) );
+		wp_add_inline_script( $handle, sprintf( 'wp.widgets.formConstructor[ %s ].prototype.config = %s;', wp_json_encode( $this->id_base ), wp_json_encode( $this->get_form_config() ) ) );
 	}
 
 	/**
