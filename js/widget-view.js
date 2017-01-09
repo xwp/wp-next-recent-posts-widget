@@ -35,7 +35,7 @@ var nextRecentPostsWidget = (function( $ ) {
 				wp.api.loadPromise,
 				wp.api.init( { versionString: 'js-widgets/v1' } )
 			];
-			$.when( apiPromises ).done( function() {
+			$.when.apply( null, apiPromises ).done( function() {
 				component.createModels();
 				component.setUpWidgets( document.body );
 
