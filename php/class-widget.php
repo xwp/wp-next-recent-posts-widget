@@ -318,14 +318,13 @@ class Widget extends \WP_JS_Widget {
 		unset( $exported_args['before_widget'] );
 		unset( $exported_args['after_widget'] );
 
-		$args['before_widget'] = preg_replace(
-			'/^(\s*<\w+\s+)/',
-			sprintf( '$1 data-args="%s" data-item="%s"', esc_attr( wp_json_encode( $exported_args ) ), esc_attr( wp_json_encode( $item ) ) ),
-			$args['before_widget'],
-			1 // Limit.
+		$data = array(
+			'args' => $exported_args,
+			'item' => $item,
 		);
 
 		echo $args['before_widget']; // WPCS: xss ok.
+		echo sprintf( '<script class="data" type="application/json">%s</script>', wp_json_encode( $data ) );
 		echo $args['after_widget']; // WPCS: xss ok.
 	}
 

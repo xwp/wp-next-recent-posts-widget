@@ -1,4 +1,4 @@
-/* global Backbone, _, wp, jQuery */
+/* global Backbone, _, wp, jQuery, JSON */
 /* exported nextRecentPostsWidget */
 
 var nextRecentPostsWidget = (function( $ ) {
@@ -126,16 +126,16 @@ var nextRecentPostsWidget = (function( $ ) {
 			containers = containers.add( component.containerSelector );
 		}
 		containers.each( function() {
-			var widgetContainer, widget, args;
+			var widgetContainer, widget, data;
 			widgetContainer = $( this );
-			args = widgetContainer.data( 'args' );
-			if ( ! component.widgets[ args.widget_id ] ) {
+			data = JSON.parse( widgetContainer.find( 'script.data:first' ).text() );
+			if ( ! component.widgets[ data.args.widget_id ] ) {
 				widget = new component.WidgetView( {
 					el: widgetContainer.get(),
-					args: args,
-					item: widgetContainer.data( 'item' )
+					args: data.args,
+					item: data.item
 				} );
-				component.widgets[ args.widget_id ] = widget;
+				component.widgets[ data.args.widget_id ] = widget;
 			}
 		} );
 		return containers;
@@ -217,9 +217,8 @@ var nextRecentPostsWidget = (function( $ ) {
 			 */
 			initialize: function( options ) {
 				var view = this, watchRelatedResourceChanges, item, posts;
-
 				view.args = options.args;
-				item = _.clone( options.item );
+				item = options.item;
 				posts = item._embedded['wp:post'] || [];
 				view.model = new component.WidgetModel( item );
 				view.collection = new component.PostsCollection( posts, { parse: true } );
