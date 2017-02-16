@@ -42,6 +42,12 @@ var nextRecentPostsWidget = (function( $ ) {
 				// Set up any new widgets appearing in rendered partials.
 				if ( 'undefined' !== typeof wp && 'undefined' !== typeof wp.customize && 'undefined' !== typeof wp.customize.selectiveRefresh ) {
 					wp.customize.selectiveRefresh.bind( 'partial-content-rendered', function( placement ) {
+
+						// Short-circuit if no container, such as when sidebar partial is updated after widgets are re-ordered.
+						if ( ! placement.container ) {
+							return;
+						}
+
 						component.setUpWidgets( placement.container );
 					} );
 				}
