@@ -134,6 +134,9 @@ var nextRecentPostsWidget = (function( $ ) {
 		containers.each( function() {
 			var widgetContainer, widget, data;
 			widgetContainer = $( this );
+			if ( widgetContainer.data( 'widgetSetUp' ) ) {
+				return;
+			}
 			data = JSON.parse( widgetContainer.find( 'script.data:first' ).text() );
 			if ( ! component.widgets[ data.args.widget_id ] ) {
 				widget = new component.WidgetView( {
@@ -142,6 +145,7 @@ var nextRecentPostsWidget = (function( $ ) {
 					item: data.item
 				} );
 				component.widgets[ data.args.widget_id ] = widget;
+				widgetContainer.data( 'widgetSetUp', true );
 			}
 		} );
 		return containers;
