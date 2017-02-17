@@ -22,6 +22,13 @@ class Widget extends \WP_JS_Widget {
 	public $id_base = 'next-recent-posts';
 
 	/**
+	 * Icon name.
+	 *
+	 * @var string
+	 */
+	public $icon_name = 'dashicons-admin-post';
+
+	/**
 	 * Plugin instance.
 	 *
 	 * @var Plugin
@@ -84,6 +91,11 @@ class Widget extends \WP_JS_Widget {
 		parent::enqueue_frontend_scripts();
 		$handle = 'next-recent-posts-widget-view';
 
+		// Prevent inline script from being added multiple times.
+		if ( wp_script_is( $handle, 'enqueued' ) ) {
+			return;
+		}
+
 		$is_customize_preview = is_customize_preview() && current_user_can( 'customize' );
 		if ( $is_customize_preview ) {
 			wp_scripts()->registered[ $handle ]->deps[] = 'customize-preview-widgets';
@@ -97,11 +109,12 @@ class Widget extends \WP_JS_Widget {
 			'defaultInstanceData' => $this->get_default_instance(),
 			'renderTemplateId' => 'widget-view-' . $this->id_base,
 			'isCustomizePreview' => $is_customize_preview,
-
 		);
-		wp_add_inline_script( $handle, sprintf( 'nextRecentPostsWidget.init( %s );', wp_json_encode( $data ) ) );
+		wp_add_inline_script( $handle, sprintf( 'nextRecentPostsWidget.init( %s );', wp_json_encode( $data ) ), 'after' );
 
 		wp_enqueue_style( 'next-recent-posts-widget-view' );
+
+		add_action( 'wp_print_footer_scripts', array( $this, 'render_template' ) );
 	}
 
 	/**

@@ -42,7 +42,6 @@ class Plugin extends Plugin_Base {
 		add_action( 'wp_default_scripts', array( $this, 'register_scripts' ), 11 );
 		add_action( 'wp_default_styles', array( $this, 'register_styles' ), 11 );
 		add_action( 'widgets_init', array( $this, 'register_widget' ) );
-		add_action( 'wp_footer', array( $this, 'render_templates' ) );
 		$priority = 20; // \WP_Customize_Widgets::customize_dynamic_partial_args() happens at priority 10.
 		add_filter( 'customize_dynamic_partial_args', array( $this, 'filter_customize_dynamic_partial_args' ), $priority, 2 );
 	}
@@ -68,12 +67,12 @@ class Plugin extends Plugin_Base {
 	 */
 	public function register_scripts( \WP_Scripts $wp_scripts ) {
 		$handle = 'next-recent-posts-widget-view';
-		$src = $this->dir_url . '/js/widget-view.js';
+		$src = $this->dir_url . 'js/widget-view.js';
 		$deps = array( 'backbone', 'wp-api', 'wp-util' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
 
 		$handle = 'next-recent-posts-widget-control';
-		$src = $this->dir_url . '/js/widget-control.js';
+		$src = $this->dir_url . 'js/widget-control.js';
 		$deps = array( 'js-widget-form' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
 	}
@@ -86,7 +85,7 @@ class Plugin extends Plugin_Base {
 	 */
 	public function register_styles( \WP_Styles $wp_styles ) {
 		$handle = 'next-recent-posts-widget-view';
-		$src = $this->dir_url . '/css/widget-view.css';
+		$src = $this->dir_url . 'css/widget-view.css';
 		$deps = array( 'dashicons' );
 		$wp_styles->add( $handle, $src, $deps, $this->version );
 	}
@@ -99,18 +98,6 @@ class Plugin extends Plugin_Base {
 	public function register_widget() {
 		$this->widget = new Widget( $this );
 		register_widget( $this->widget );
-	}
-
-	/**
-	 * Render templates.
-	 *
-	 * @global \WP_Widget_Factory $wp_widget_factory
-	 */
-	public function render_templates() {
-		global $wp_widget_factory;
-		if ( in_array( $this->widget, $wp_widget_factory->widgets, true ) ) {
-			$this->widget->render_template();
-		}
 	}
 
 	/**
