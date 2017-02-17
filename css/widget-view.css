@@ -3,12 +3,12 @@
 	margin-bottom: 0.5em;
 }
 .widget_next-recent-posts h3 {
-    font-size: 1em;
+	font-size: 1em;
 	margin-bottom: 0;
 }
 .widget_next-recent-posts h3 > a {
-    font-size: 1em;
-    font-weight: bold;
+	font-size: 1em;
+	font-weight: bold;
 }
 .widget_next-recent-posts img {
 	display: block;
@@ -27,6 +27,15 @@
 	border-bottom: none;
 	-webkit-box-shadow: none !important;
 	box-shadow: none  !important;
+}
+.widget_next-recent-posts .post-edit-link > .screen-reader-text {
+	clip: rect(1px, 1px, 1px, 1px);
+	height: 1px;
+	overflow: hidden;
+	position: absolute !important;
+	width: 1px;
+	/* many screen reader and browser combinations announce broken words as they would appear visually */
+	word-wrap: normal !important;
 }
 .widget_next-recent-posts .post-edit-link::before {
 	font-family: Dashicons;
