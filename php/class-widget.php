@@ -84,6 +84,12 @@ class Widget extends \WP_JS_Widget {
 		parent::enqueue_frontend_scripts();
 		$handle = 'next-recent-posts-widget-view';
 
+		// Prevent inline script from being added multiple times.
+		if ( wp_script_is( $handle, 'enqueued' ) ) {
+			return;
+		}
+
+		// @todo Short-circuit if already enqueued?
 		$is_customize_preview = is_customize_preview() && current_user_can( 'customize' );
 		if ( $is_customize_preview ) {
 			wp_scripts()->registered[ $handle ]->deps[] = 'customize-preview-widgets';
