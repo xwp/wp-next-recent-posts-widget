@@ -22,6 +22,13 @@ class Widget extends \WP_JS_Widget {
 	public $id_base = 'next-recent-posts';
 
 	/**
+	 * Icon name.
+	 *
+	 * @var string
+	 */
+	public $icon_name = 'dashicons-admin-post';
+
+	/**
 	 * Plugin instance.
 	 *
 	 * @var Plugin
