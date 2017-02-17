@@ -96,7 +96,6 @@ class Widget extends \WP_JS_Widget {
 			return;
 		}
 
-		// @todo Short-circuit if already enqueued?
 		$is_customize_preview = is_customize_preview() && current_user_can( 'customize' );
 		if ( $is_customize_preview ) {
 			wp_scripts()->registered[ $handle ]->deps[] = 'customize-preview-widgets';
