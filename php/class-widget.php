@@ -97,11 +97,12 @@ class Widget extends \WP_JS_Widget {
 			'defaultInstanceData' => $this->get_default_instance(),
 			'renderTemplateId' => 'widget-view-' . $this->id_base,
 			'isCustomizePreview' => $is_customize_preview,
-
 		);
-		wp_add_inline_script( $handle, sprintf( 'nextRecentPostsWidget.init( %s );', wp_json_encode( $data ) ) );
+		wp_add_inline_script( $handle, sprintf( 'nextRecentPostsWidget.init( %s );', wp_json_encode( $data ) ), 'after' );
 
 		wp_enqueue_style( 'next-recent-posts-widget-view' );
+
+		add_action( 'wp_print_footer_scripts', array( $this, 'render_template' ) );
 	}
 
 	/**
