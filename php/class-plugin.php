@@ -68,12 +68,12 @@ class Plugin extends Plugin_Base {
 	 */
 	public function register_scripts( \WP_Scripts $wp_scripts ) {
 		$handle = 'next-recent-posts-widget-view';
-		$src = $this->dir_url . '/js/widget-view.js';
+		$src = $this->dir_url . 'js/widget-view.js';
 		$deps = array( 'backbone', 'wp-api', 'wp-util' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
 
 		$handle = 'next-recent-posts-widget-control';
-		$src = $this->dir_url . '/js/widget-control.js';
+		$src = $this->dir_url . 'js/widget-control.js';
 		$deps = array( 'js-widget-form' );
 		$wp_scripts->add( $handle, $src, $deps, $this->version );
 	}
@@ -86,7 +86,7 @@ class Plugin extends Plugin_Base {
 	 */
 	public function register_styles( \WP_Styles $wp_styles ) {
 		$handle = 'next-recent-posts-widget-view';
-		$src = $this->dir_url . '/css/widget-view.css';
+		$src = $this->dir_url . 'css/widget-view.css';
 		$deps = array( 'dashicons' );
 		$wp_styles->add( $handle, $src, $deps, $this->version );
 	}
