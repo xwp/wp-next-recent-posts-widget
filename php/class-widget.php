@@ -192,7 +192,7 @@ class Widget extends \WP_JS_Widget {
 
 		/** This filter is documented in wp-includes/widgets/class-wp-widget-recent-posts.php */
 		$query = new \WP_Query( apply_filters( 'widget_posts_args', array(
-			'posts_per_page'      => $instance['number'],
+			'posts_per_page'      => $item['number'],
 			'no_found_rows'       => true,
 			'post_status'         => 'publish',
 			'ignore_sticky_posts' => true,
