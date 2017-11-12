@@ -5,11 +5,12 @@ Next-generation Recent Posts widget which fetches posts via the WP REST API and 
 
 **Contributors:** [westonruter](https://profiles.wordpress.org/westonruter), [xwp](https://profiles.wordpress.org/xwp)  
 **Requires at least:** 4.7.0  
-**Tested up to:** 4.7.0  
+**Tested up to:** 4.9.0  
 **Stable tag:** trunk (master)  
 **License:** [GPLv2 or later](http://www.gnu.org/licenses/gpl-2.0.html)  
+**Requires PHP:** 5.4  
 
-[![Build Status](https://travis-ci.org/xwp/wp-next-recent-posts-widget.svg?branch=master)](https://travis-ci.org/xwp/wp-next-recent-posts-widget) [![Coverage Status](https://coveralls.io/repos/xwp/wp-next-recent-posts-widget/badge.svg?branch=master)](https://coveralls.io/github/xwp/wp-next-recent-posts-widget) [![Built with Grunt](https://cdn.gruntjs.com/builtwith.svg)](http://gruntjs.com) [![devDependency Status](https://david-dm.org/xwp/wp-next-recent-posts-widget/dev-status.svg)](https://david-dm.org/xwp/wp-next-recent-posts-widget#info=devDependencies) 
+[![Build Status](https://travis-ci.org/xwp/wp-next-recent-posts-widget.svg?branch=master)](https://travis-ci.org/xwp/wp-next-recent-posts-widget) [![Coverage Status](https://coveralls.io/repos/xwp/wp-next-recent-posts-widget/badge.svg?branch=master)](https://coveralls.io/github/xwp/wp-next-recent-posts-widget) [![Built with Grunt](https://cdn.gruntjs.com/builtwith.svg)](http://gruntjs.com) [![devDependency Status](https://david-dm.org/xwp/wp-next-recent-posts-widget/dev-status.svg)](https://david-dm.org/xwp/wp-next-recent-posts-widget?type=dev) 
 
 ## Description ##
 

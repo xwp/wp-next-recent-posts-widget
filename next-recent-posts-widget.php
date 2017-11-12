@@ -30,7 +30,7 @@
  * @package NextRecentPostsWidget
  */
 
-if ( version_compare( phpversion(), '5.3', '>=' ) ) {
+if ( version_compare( phpversion(), '5.4', '>=' ) ) {
 	require_once __DIR__ . '/instance.php';
 } else {
 	if ( defined( 'WP_CLI' ) ) {
