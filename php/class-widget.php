@@ -378,7 +378,7 @@ class Widget extends \WP_JS_Widget {
 	public function render_template() {
 		$edit_link_template = admin_url( '/' ) . 'post.php?post=%d&action=edit';
 		?>
-		<script id="tmpl-widget-view-<?php echo esc_attr( $this->id_base ) ?>" type="text/template">
+		<script id="tmpl-widget-view-<?php echo esc_attr( $this->id_base ); ?>" type="text/template">
 			<#
 			var editPostLinkTpl = <?php echo wp_json_encode( $edit_link_template ); ?>;
 			#>
@@ -395,7 +395,7 @@ class Widget extends \WP_JS_Widget {
 								<a itemprop="title" href="{{ post.link }}">{{{ post.title.rendered }}}</a>
 								<?php if ( current_user_can( 'edit_posts' ) && ( ! is_customize_preview() || class_exists( 'WP_Customize_Post_Setting' ) ) ) : ?>
 									<a class="post-edit-link" href="{{ editPostLinkTpl.replace( '%d', post.id ) }}">
-										<span class="screen-reader-text"><?php esc_html_e( 'Edit This', 'default' ) ?></span>
+										<span class="screen-reader-text"><?php esc_html_e( 'Edit This', 'default' ); ?></span>
 									</a>
 								<?php endif; ?>
 							</h3>
