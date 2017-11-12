@@ -1,6 +1,7 @@
 <?php
 /**
  * Class Plugin_Base
+ *
  * @package NextRecentPostsWidget
  */
 
@@ -8,6 +9,7 @@ namespace NextRecentPostsWidget;
 
 /**
  * Class Plugin_Base
+ *
  * @package NextRecentPostsWidget
  */
 abstract class Plugin_Base {
